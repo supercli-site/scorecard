@@ -84,8 +84,12 @@ version: 1.0.0
 #### ② 分发 Distribution
 
 - 是否发布到 registry（npm/PyPI/crates/…）？`npm view <pkg> version` / `pip index versions <pkg>`。
+- **发布物料**（launch 打法里所有渠道复用的同一份）：README 首屏一行可复制的安装命令；
+  demo 动图/视频 15-45 秒（终端项目 `vhs` 录，GUI 用 Screen Studio）；README 头部 badges；
+  social preview 1280×640（Settings 里配，API 读不到，人工核对）。完整打法见
+  [`docs/launch-playbook.md`](../../docs/launch-playbook.md)。
 - 生态收录：awesome-* 列表、官方 gallery/marketplace。搜 `gh api "search/code?q=<repo-name>+repo:<awesome-repo>"` 验证。
-- 发布动作：HN/Reddit/V2EX/掘金/Twitter 首发帖。
+- 发布动作：HN/Reddit/V2EX/掘金/Twitter 首发帖；发布日集中引 star（Trending 看增速不看绝对数）。
 - 流量来源：`gh api repos/<r>/traffic/popular/referrers`（需 push 权限）。
 
 **类型特有分发：**

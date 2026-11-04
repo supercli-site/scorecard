@@ -499,23 +499,60 @@ export async function auditProject({ owner, repo, token }) {
 
   // ② 分发 —— 「好代码没人看」的分水岭
   //
-  // 三条独立证据，任一条成立都说明「陌生人拿得到」：
+  // 五条独立证据，任一条成立都说明「陌生人拿得到」：
   //   registry 发布(+4) · README 有安装命令(+3) · release 带可下载产物(+2)
+  //   · README 带 demo 动图/视频(+1.5) · 头部 badges(+0.5)
   // 都不看 star —— 用 star 证明分发是循环论证。
+  //
+  // 后两条是「发布物料」：launch 打法里所有渠道复用的同一份东西
+  // （docs/launch-playbook.md）。gap 文本直接给该做的事，不写空话。
   {
     const ev = [], gaps = []
-    const manual = ['awesome-list / marketplace 收录情况', 'HN/Reddit/V2EX/掘金首发帖']
+    const manual = [
+      'awesome-list / marketplace 收录情况',
+      'HN/Reddit/V2EX/掘金首发帖',
+      'social preview（Settings → Social preview，1280×640）API 读不到，转发卡片是否得体只能人工核对',
+    ]
     let score = 0
     let unv = 0
 
     // ── registry：按清单文件挑对应生态，不再假设人人都发 npm
     const m = MANIFESTS.find((x) => files.some((f) => x.file.test(f)))
     if (!m) {
-      // 根目录没有任何认得的清单文件 —— 查不到 registry，不代表没有分发渠道。
+      // 根目录没有清单时，常见单仓多语言布局把清单放在子目录 ——
+      // kyvault 的 Cargo.toml 在 rust/ 下，实测被判「查不到 registry」，
+      // 可它明明发布在 crates.io。对顶层已有的目录做一次有界的探测，
+      // 探测不到再按「本引擎看不到」剔除，不多打 API。
+      const NESTED = [
+        { dir: 'rust', file: 'rust/Cargo.toml', eco: 'crates.io', pick: (t) => (t.match(/^\s*name\s*=\s*"([^"]+)"/m) || [])[1], url: (n) => `https://crates.io/api/v1/crates/${encodeURIComponent(n)}` },
+        { dir: 'python', file: 'python/pyproject.toml', eco: 'pypi', pick: (t) => (t.match(/^\s*name\s*=\s*"([^"]+)"/m) || [])[1], url: (n) => `https://pypi.org/pypi/${encodeURIComponent(n)}/json` },
+      ]
+      for (const n of NESTED) {
+        if (!dirs.includes(n.dir)) continue
+        try {
+          const text = (await gh(`/repos/${full}/contents/${n.file}`, token, { raw: true })).data
+          const name = text && n.pick(text)
+          if (!name) continue
+          const res = await fetch(n.url(name), {
+            headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.webkubor.online)' },
+            signal: AbortSignal.timeout(5000)
+          }).catch(() => null)
+          if (res?.ok) {
+            ev.push(`${n.eco} 已发布：${name}（清单在 ${n.dir}/）`)
+            score += 4
+          } else {
+            gaps.push(`${n.dir}/${n.file.split('/').pop()} 声明了 ${name}，但 ${n.eco} 上查不到 —— 没发布`)
+          }
+          break
+        } catch { /* 子目录清单读不到不算项目欠账 */ }
+      }
+    }
+    if (!m && !ev.some((x) => x.includes('已发布'))) {
+      // 探测后仍查不到 registry，不代表没有分发渠道。
       // CPython 走 python.org 安装包、Go 走 go.dev、很多项目走系统包管理器，
       // 这些本引擎都看不到。把这 4 分从满分里剔除，而不是判它「没发布」。
       unv += 4
-      manual.push('根目录没有认得的包清单，查不到 registry 记录 —— 这 4 分已从满分中剔除，请自行核对官网/系统包管理器渠道')
+      manual.push('根目录与常见子目录都没有认得的包清单，查不到 registry 记录 —— 这 4 分已从满分中剔除，请自行核对官网/系统包管理器渠道')
     }
     if (m) {
       const fname = files.find((f) => m.file.test(f))
@@ -559,7 +596,7 @@ export async function auditProject({ owner, repo, token }) {
         ev.push(`README 给了安装方式：${hits.slice(0, 3).map((h) => h.how).join('、')}`)
         score += 3
       } else {
-        gaps.push('README 里找不到一条可以照抄的安装命令')
+        gaps.push('README 里找不到一条可以照抄的安装命令 —— 放首屏代码块，访客 3 秒内能复制')
       }
     }
 
@@ -574,6 +611,25 @@ export async function auditProject({ owner, repo, token }) {
 
     if (r.homepage) { score += 1; ev.push('有 homepage 可导流') } else { gaps.push('没有 demo/官网链接') }
     if ((r.topics || []).length >= 6) score += 0.5
+
+    // ── 发布物料：README 里的 demo 动图/视频。
+    // 一份物料三处复用（README / 社媒 / 落地页），是 launch 打法里性价比最高的
+    // 一件；终端项目用 vhs 一键录，GUI 项目用 Screen Studio。
+    const DEMO_ASSET = /(?:src|href)=["'][^"']*\.(?:gif|mp4|webm)(?:[?#]["']|["'])|asciinema|vhs|demo\.(?:gif|mp4|webm)|screencast|tapes\/|\.tape\b/i
+    if (readme && DEMO_ASSET.test(readme)) {
+      ev.push('README 带演示动图/视频')
+      score += 1.5
+    } else if (readme) {
+      gaps.push('README 没有 demo 动图/视频 —— launch 物料里最通用的一份，README、社媒、落地页三处复用（终端项目 vhs 录制，GUI 用 Screen Studio）')
+    }
+
+    // ── 头部 badges：license / 版本 / build，项目状态一眼可见
+    if (readme && /img\.shields\.io|badge\.fury\.io|travis-ci|circleci|github\.com\/[^/]+\/[^/]+\/(?:actions|workflows)\/badge/i.test(readme)) {
+      ev.push('README 头部带 badges')
+      score += 0.5
+    } else if (readme) {
+      gaps.push('README 没有任何 badges（license / 版本 / build）—— 发布状态一眼可见，shields.io 三个图标就够')
+    }
 
     // 一条证据都没有时才算真的「拿不到」
     if (!ev.length) {
@@ -1013,6 +1069,13 @@ export function reportMarkdown(a, { site = '' } = {}) {
     L.push('')
     a.todos.forEach((t, i) => L.push(`${i + 1}. **[${t.dim} ${t.dimScore}]** ${t.text}`))
     L.push('')
+    // 分发维度的 gap 带了该做的事；渠道与节奏的完整打法单独成文，报告只给入口。
+    const distGap = a.dims.some((d) => d.key === 'distribution' && d.gaps.length)
+    if (distGap) {
+      L.push('> 分发与发布节奏的完整打法（物料 → 小圈子 → Show HN/PH → awesome-list → 矩阵分发）：')
+      L.push(`> [docs/launch-playbook.md](https://github.com/webkubor/scorecard/blob/main/docs/launch-playbook.md)`)
+      L.push('')
+    }
   }
 
   L.push('## 逐维度证据')
