@@ -1070,10 +1070,11 @@ export function reportMarkdown(a, { site = '' } = {}) {
     a.todos.forEach((t, i) => L.push(`${i + 1}. **[${t.dim} ${t.dimScore}]** ${t.text}`))
     L.push('')
     // 分发维度的 gap 带了该做的事；渠道与节奏的完整打法单独成文，报告只给入口。
+    // 入口统一收敛到站内 #/playbook —— 转付费时只改那一处。
     const distGap = a.dims.some((d) => d.key === 'distribution' && d.gaps.length)
     if (distGap) {
-      L.push('> 分发与发布节奏的完整打法（物料 → 小圈子 → Show HN/PH → awesome-list → 矩阵分发）：')
-      L.push(`> [docs/launch-playbook.md](https://github.com/webkubor/scorecard/blob/main/docs/launch-playbook.md)`)
+      L.push('> **PRO · 发布打法（高阶指导，限时免费）** —— 物料 → 小圈子 → Show HN/PH → awesome-list → 矩阵分发，完整 30 天节奏：')
+      L.push(`> [scorecard.webkubor.online/#/playbook](https://scorecard.webkubor.online/#/playbook)`)
       L.push('')
     }
   }
