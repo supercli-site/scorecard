@@ -29,7 +29,7 @@ bun run check      # 维度一致性 + 四路引擎维度纪律 + 单元测试
 ## 提交流程
 
 ```bash
-git clone git@github.com:webkubor/scorecard.git
+git clone git@github.com:supercli-site/scorecard.git
 cd scorecard
 bun install
 bun run build      # 生成 dist/

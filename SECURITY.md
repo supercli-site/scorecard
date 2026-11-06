@@ -4,7 +4,7 @@
 
 请**不要**用公开 issue 报安全问题。用 GitHub 的私有漏洞报告：
 
-<https://github.com/webkubor/scorecard/security/advisories/new>
+<https://github.com/supercli-site/scorecard/security/advisories/new>
 
 请在报告里带上：影响版本、复现步骤、你能想到的最坏后果。
 如果涉及凭据，**不要贴明文**，只说在哪一类输入/配置里能触发。

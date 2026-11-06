@@ -1089,7 +1089,7 @@ app.get('/api/skill', async (c) => {
       install: {
         // 各家 agent 的 skill 目录不一样，所以给内容 + 落点建议，不代写文件
         curl: `curl -sL ${SITE_URL}/skill.md -o <你的-skills目录>/project-maturity-audit/SKILL.md`,
-        npx: 'npx -y github:webkubor/scorecard <target>',
+        npx: 'npx -y github:supercli-site/scorecard <target>',
         note: '前端整站是 Vue SPA，抓不到正文；要看内容请走上面的 skill.md 与 report.md',
       },
       endpoints: {

@@ -2,10 +2,10 @@
 
 # Scorecard
 
-[![license](https://img.shields.io/github/license/webkubor/scorecard.svg)](./LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/webkubor/scorecard.svg)](https://github.com/webkubor/scorecard/stargazers)
+[![license](https://img.shields.io/github/license/supercli-site/scorecard.svg)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/stargazers)
 [![online status](https://img.shields.io/website-up-down-green-red/https/scorecard.webkubor.online.svg)](https://scorecard.webkubor.online)
-[![issues](https://img.shields.io/github/issues/webkubor/scorecard.svg)](https://github.com/webkubor/scorecard/issues)
+[![issues](https://img.shields.io/github/issues/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/issues)
 
 > **做决定之前，先跑一次体检。**
 >
@@ -272,7 +272,7 @@ token 只在服务端使用，从不下发给前端。
 
 ```bash
 # 三路审计（type 推断：URL=page，pkg 名=npm，owner/repo=github）
-scorecard webkubor/scorecard                    # GitHub 仓库（9 维）
+scorecard supercli-site/scorecard                    # GitHub 仓库（9 维）
 scorecard react --type npm                      # npm 包（7 维）
 scorecard https://example.com --type page       # 网页（9 维）
 
@@ -282,13 +282,13 @@ scorecard --compare-a https://test.example.com \
           --type page
 
 # 报告 Markdown
-scorecard webkubor/scorecard --md > report.md
+scorecard supercli-site/scorecard --md > report.md
 
 # CI 闸门
 scorecard react --type npm --min 6
 
 # 跳过 30 分钟缓存
-scorecard webkubor/scorecard --fresh
+scorecard supercli-site/scorecard --fresh
 
 # GEO：品牌在 AI 答案里的可见度（--q 可重复给多条问题）
 scorecard geo --brand museav --domain museav.com \

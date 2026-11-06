@@ -987,7 +987,7 @@ export function reportMarkdown(a, { site = '' } = {}) {
     }
   }
   L.push('')
-  L.push('九维度标准来自 [project-maturity-audit](https://github.com/webkubor/scorecard/tree/main/skills/project-maturity-audit)：')
+  L.push('九维度标准来自 [project-maturity-audit](https://github.com/supercli-site/scorecard/tree/main/skills/project-maturity-audit)：')
   L.push('评的不是「代码好不好」，是「陌生人会不会在 10 秒内 star、安装、信任它」。')
   L.push('')
 

@@ -2,10 +2,10 @@
 
 # Scorecard
 
-[![license](https://img.shields.io/github/license/webkubor/scorecard.svg)](./LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/webkubor/scorecard.svg)](https://github.com/webkubor/scorecard/stargazers)
+[![license](https://img.shields.io/github/license/supercli-site/scorecard.svg)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/stargazers)
 [![online status](https://img.shields.io/website-up-down-green-red/https/scorecard.webkubor.online.svg)](https://scorecard.webkubor.online)
-[![issues](https://img.shields.io/github/issues/webkubor/scorecard.svg)](https://github.com/webkubor/scorecard/issues)
+[![issues](https://img.shields.io/github/issues/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/issues)
 
 > Paste a **GitHub URL / npm package name / webpage URL / @GitHub username**, get a per-target-type quality report in seconds: radar chart, an action list sorted by `impact ÷ cost`, and a Markdown report you can hand straight to an AI. **Compare two targets** (test env ↔ prod env, you ↔ a competitor) to see exactly where they diverge. No login, public repos no token needed.
 
@@ -71,7 +71,7 @@ The token is server-side only and never sent to the front-end.
 
 ```bash
 # Engines (type inferred: URL → page, pkg name → npm, owner/repo → github, @user → profile)
-scorecard webkubor/scorecard                    # GitHub repo (9 dims)
+scorecard supercli-site/scorecard                    # GitHub repo (9 dims)
 scorecard react --type npm                      # npm package (7 dims)
 scorecard https://example.com --type page       # webpage (9 dims)
 scorecard @webkubor --type profile              # GitHub profile as a résumé (7 dims)
@@ -82,13 +82,13 @@ scorecard --compare-a https://test.example.com \
           --type page
 
 # Markdown report (hand straight to an AI)
-scorecard webkubor/scorecard --md > report.md
+scorecard supercli-site/scorecard --md > report.md
 
 # CI gate: fail if score below threshold
 scorecard react --type npm --min 6
 
 # Skip the 30-minute cache
-scorecard webkubor/scorecard --fresh
+scorecard supercli-site/scorecard --fresh
 ```
 
 The CLI just shells out to the HTTP API — agents pick this up as their default path.

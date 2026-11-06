@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/webkubor/scorecard.git"
+    "url": "git+https://github.com/supercli-site/scorecard.git"
   },
   "scripts": {
     "dev": "vite",
