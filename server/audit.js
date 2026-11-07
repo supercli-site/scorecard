@@ -624,10 +624,14 @@ export async function auditProject({ owner, repo, token }) {
     const runList = runs.ok ? runs.data?.workflow_runs || [] : []
     const engineeringRuns = runList.filter((run) => ENGINEERING_WORKFLOW.test(run.name || ''))
     if (engineeringRuns.length) {
-      ev.push(`最近 ${runList.length} 条 Actions 记录中，按工作流分别检查已完成结果（仅为样本）`)
+      ev.push(`最近 ${runList.length} 条 Actions 记录中，仅按默认分支的工作流检查已完成结果（仅为样本）`)
+      // PR 的 head_branch 可能与默认分支同名；不能据此把 PR 的失败归给默认分支。
+      const defaultRuns = engineeringRuns.filter(run => r.default_branch && run.head_branch === r.default_branch && !['pull_request', 'pull_request_target'].includes(run.event) && (!run.head_repository?.full_name || run.head_repository.full_name.toLowerCase() === full.toLowerCase()))
+      const otherFailures = engineeringRuns.filter(run => !defaultRuns.includes(run) && run.status === 'completed' && ['failure', 'timed_out', 'startup_failure'].includes(run.conclusion))
+      for (const run of otherFailures) manual.push(`其他分支或 PR 的历史工作流 ${run.conclusion}（${run.name}，${run.head_branch || '分支未知'}），未计入默认分支评分`)
       // 按 workflow 分组，只比较每条 workflow 最近完成的记录；跳过/取消不是失败。
       const latestCompleted = new Map()
-      for (const run of engineeringRuns) {
+      for (const run of defaultRuns) {
         if (run.status !== 'completed') continue
         const key = run.workflow_id ?? run.name
         if (!latestCompleted.has(key)) latestCompleted.set(key, run)
@@ -636,7 +640,7 @@ export async function auditProject({ owner, repo, token }) {
       const success = completed.filter(run => run.conclusion === 'success')
       const failure = completed.filter(run => ['failure', 'timed_out', 'startup_failure'].includes(run.conclusion))
       const unknown = completed.filter(run => run.conclusion !== 'success' && !['failure', 'timed_out', 'startup_failure'].includes(run.conclusion))
-      if (engineeringRuns[0].status !== 'completed') ev.push(`CI 正在运行（${engineeringRuns[0].name}）`)
+      if (defaultRuns[0] && defaultRuns[0].status !== 'completed') ev.push(`默认分支 CI 正在运行（${defaultRuns[0].name}）`)
       for (const run of success) ev.push(`CI 最近完成一次 success（${run.name}）`)
       for (const run of failure) gaps.push(`工作流最近完成一次 ${run.conclusion}（${run.name}），请检查该次运行`)
       for (const run of unknown) manual.push(`工作流最近完成一次 ${run.conclusion || 'unknown'}（${run.name}），无法据此判断通过或失败`)
@@ -644,7 +648,7 @@ export async function auditProject({ owner, repo, token }) {
       else if (success.length) score += 2
       else {
         unv += 2
-        if (!completed.length) manual.push('CI 尚无完成记录，等待当前运行结束后再核验')
+        if (!completed.length) manual.push('样本中没有可确认的默认分支 CI 完成记录，这 2 分已从满分中剔除')
       }
     } else if (runList.length) {
       // 有 Actions 记录、但没有可识别的工程工作流时，是我们的判断盲区，不是项目的失败。
