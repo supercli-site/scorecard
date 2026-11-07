@@ -624,14 +624,28 @@ export async function auditProject({ owner, repo, token }) {
     const runList = runs.ok ? runs.data?.workflow_runs || [] : []
     const engineeringRuns = runList.filter((run) => ENGINEERING_WORKFLOW.test(run.name || ''))
     if (engineeringRuns.length) {
-      // 刚 push 后的最新 run 通常还在排队或执行；把它当「红 CI」会让活跃项目
-      // 在每次发布窗口被无端扣分。优先评估最近一个已完成 run，运行中的只作中性证据。
-      const latest = engineeringRuns[0]
-      const completed = engineeringRuns.find((run) => run.status === 'completed')
-      if (latest.status !== 'completed') ev.push(`CI 正在运行（${latest.name}）`)
-      if (completed?.conclusion === 'success') { ev.push(`CI 最近完成一次 success（${completed.name}）`); score += 2 }
-      else if (completed) { gaps.push(`CI 最近完成一次是 ${completed.conclusion || completed.status}（${completed.name}）—— 红着的 CI 比没有 CI 更伤`); score += 0.5 }
-      else { manual.push('CI 尚无完成记录，等待当前运行结束后再核验') }
+      ev.push(`最近 ${runList.length} 条 Actions 记录中，按工作流分别检查已完成结果（仅为样本）`)
+      // 按 workflow 分组，只比较每条 workflow 最近完成的记录；跳过/取消不是失败。
+      const latestCompleted = new Map()
+      for (const run of engineeringRuns) {
+        if (run.status !== 'completed') continue
+        const key = run.workflow_id ?? run.name
+        if (!latestCompleted.has(key)) latestCompleted.set(key, run)
+      }
+      const completed = [...latestCompleted.values()]
+      const success = completed.filter(run => run.conclusion === 'success')
+      const failure = completed.filter(run => ['failure', 'timed_out', 'startup_failure'].includes(run.conclusion))
+      const unknown = completed.filter(run => run.conclusion !== 'success' && !['failure', 'timed_out', 'startup_failure'].includes(run.conclusion))
+      if (engineeringRuns[0].status !== 'completed') ev.push(`CI 正在运行（${engineeringRuns[0].name}）`)
+      for (const run of success) ev.push(`CI 最近完成一次 success（${run.name}）`)
+      for (const run of failure) gaps.push(`工作流最近完成一次 ${run.conclusion}（${run.name}），请检查该次运行`)
+      for (const run of unknown) manual.push(`工作流最近完成一次 ${run.conclusion || 'unknown'}（${run.name}），无法据此判断通过或失败`)
+      if (failure.length) score += 0.5
+      else if (success.length) score += 2
+      else {
+        unv += 2
+        if (!completed.length) manual.push('CI 尚无完成记录，等待当前运行结束后再核验')
+      }
     } else if (runList.length) {
       // 有 Actions 记录、但没有可识别的工程工作流时，是我们的判断盲区，不是项目的失败。
       unv += 2
