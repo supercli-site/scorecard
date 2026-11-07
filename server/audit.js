@@ -626,7 +626,7 @@ export async function auditProject({ owner, repo, token }) {
     if (engineeringRuns.length) {
       ev.push(`最近 ${runList.length} 条 Actions 记录中，仅按默认分支的工作流检查已完成结果（仅为样本）`)
       // PR 的 head_branch 可能与默认分支同名；不能据此把 PR 的失败归给默认分支。
-      const defaultRuns = engineeringRuns.filter(run => r.default_branch && run.head_branch === r.default_branch && !['pull_request', 'pull_request_target'].includes(run.event) && (!run.head_repository?.full_name || run.head_repository.full_name.toLowerCase() === full.toLowerCase()))
+      const defaultRuns = engineeringRuns.filter(run => r.default_branch && run.head_branch === r.default_branch && typeof run.event === 'string' && run.event.length > 0 && !['pull_request', 'pull_request_target'].includes(run.event) && (!run.head_repository?.full_name || run.head_repository.full_name.toLowerCase() === full.toLowerCase()))
       const otherFailures = engineeringRuns.filter(run => !defaultRuns.includes(run) && run.status === 'completed' && ['failure', 'timed_out', 'startup_failure'].includes(run.conclusion))
       for (const run of otherFailures) manual.push(`其他分支或 PR 的历史工作流 ${run.conclusion}（${run.name}，${run.head_branch || '分支未知'}），未计入默认分支评分`)
       // 按 workflow 分组，只比较每条 workflow 最近完成的记录；跳过/取消不是失败。

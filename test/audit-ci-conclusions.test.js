@@ -54,6 +54,14 @@ test('a pull request named main does not count as default branch evidence', asyn
   expect(result.evidence.join(' ')).toContain('success')
 })
 
+test('missing event type is not treated as confirmed default-branch failure', async () => {
+  const unknown = { ...run('CI', 'failure', 1), event: undefined }
+  const result = await auditRuns([unknown])
+  expect(result.gaps.join(' ')).not.toContain('failure')
+  expect(result.unverifiable).toBeGreaterThanOrEqual(2)
+  expect(result.manual.join(' ')).toContain('未计入默认分支评分')
+})
+
 test('a real default-branch failure remains a gap', async () => {
   const result = await auditRuns([run('CI', 'failure', 1), run('CI', 'success', 1, 'feature/other')])
   expect(result.gaps.join(' ')).toContain('failure')
