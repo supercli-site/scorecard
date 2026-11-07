@@ -89,7 +89,7 @@ version: 1.0.0
 #### ② 分发 Distribution
 
 - 是否发布到 registry（npm/PyPI/crates/…）？`npm view <pkg> version` / `pip index versions <pkg>`。
-- 生态收录：逐个核对社区实际目录条目与上游 PR 的 `merged` 状态，保留准确链接。同一目录的多次更新不是多个社区；关闭不等于合并，上游主题收录也不等于下游插件被官方认证。搜索或权限受限时写明“未查到”，不猜测。
+- 生态收录：逐个核对社区实际目录条目与上游 PR 的 `merged` 状态，保留准确链接。同一目录的多次更新不是多个社区；关闭不等于合并，上游主题收录也不等于下游插件被官方认证。只有实际搜索并覆盖目标目录后才能说“未查到”；权限或网络受限时标记 manual/unverifiable，说明未核实的范围。
 - 推广：先准备符合用户语气与平台的文案及素材；向他人发帖、评论或发送消息必须有用户明确指令。用户要求自行发布时，仅交付稿件和素材，不代发。
 - 流量来源：`gh api repos/<r>/traffic/popular/referrers`（需 push 权限）。
 
@@ -110,8 +110,8 @@ version: 1.0.0
 - **发布媒体**：每版 GitHub Release 正文公开时即须包含本版图片或可播放视频，除非用户明确指定例外；检查匿名访客能否访问。若只依赖发布后异步补图，要明确存在失败和无图窗口，不能当作发布时已满足。
 - 版本化：tag 规范（semver）、CHANGELOG 持续更新；已发布产物不可变，不改写已发布包以掩盖差异。
 - Release 资产完整性：`gh release view --json assets` 的 HTTP 状态只是可访问性线索；媒体展示还需真实页面验收。
-- CI 管线状态：`gh run list` 最近是否通过。
-- 产物与源码同步：仓库里不提交 dist/build 产物。
+- CI 管线状态：逐一核对实际 run、job 与必需检查；`skipped`、`neutral` 或 `cancelled` 不等于失败。无法判断时标记 manual/unverifiable，不用单个非决定性结果推断整仓 CI。
+- 产物与源码同步：按项目的发布与打包契约检查；不要仅凭目录名判断 `dist/` 或 `build/` 是否应提交。
 
 #### ④ 质量护栏 Quality Gates
 
