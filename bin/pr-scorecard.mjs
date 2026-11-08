@@ -27,7 +27,7 @@ export function renderSummary(report, context) {
     MARKER,
     '## Scorecard · PR project maturity',
     '',
-    `**${report.score.toFixed(1)} / 10** · ${safe(report.band)} · ${safe(report.type)}`,
+    `**${report.score.toFixed(1)} / 10** · ${safe(report.type)} project maturity`,
     '',
     `File evidence: \`${safe(context.source)}@${safe(context.sha)}\` · PR #${context.number} · base \`${safe(context.baseSha)}\``,
     '',

@@ -16,8 +16,9 @@ test('accepts a public fork head and rejects private repositories and malformed 
 })
 
 test('report shows immutable head, separates live metadata and never substitutes zero for missing dimensions', () => {
-  const summary = renderSummary({ score: 8.2, band: '健康', type: 'cli', ts: '2026-11-08', dims: [{ name: '文档', score: null, gaps: [], manual: ['人工核实'] }] }, parseEvent(event()))
+  const summary = renderSummary({ score: 8.2, band: '同品类头部', type: 'cli', ts: '2026-11-08', dims: [{ name: '文档', score: null, gaps: [], manual: ['人工核实'] }] }, parseEvent(event()))
   expect(summary).toContain('8.2 / 10')
+  expect(summary).not.toContain('同品类头部')
   expect(summary).toContain(`contributor/project@${sha}`)
   expect(summary).toContain('base repository at scan time')
   expect(summary).toContain('Unverifiable')
