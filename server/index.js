@@ -21,6 +21,7 @@ import { auditPage, reportMarkdown as reportMarkdownPage } from './audit-page.js
 import { auditProfile, reportMarkdown as reportMarkdownProfile, normalizeProfileTarget } from './audit-profile.js'
 import { auditGeo, reportMarkdown as reportMarkdownGeo, geoProviderStatus, hydrateGeo, resolveGeoProvider } from './audit-geo.js'
 import { compareReports, compareMarkdown } from './compare.js'
+import { displayBand, SCORE_HINT } from './score-labels.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -120,6 +121,8 @@ function hydrate(row, key, type = 'github') {
     ...meta,
     project: row.project || key,
     targetType: row.targetType || type,
+    band: displayBand(type, row.band),
+    ...(displayBand(type, row.band) !== row.band ? { bandHint: SCORE_HINT } : {}),
     dims: typeof row.dims === 'string' ? JSON.parse(row.dims || '[]') : row.dims || [],
     todos: typeof row.todos === 'string' ? JSON.parse(row.todos || '[]') : row.todos || []
   }
@@ -452,14 +455,14 @@ app.get('/api/scorecard/stats', (c) => {
 app.get('/api/scorecard/leaderboard', (c) => {
   const limit = Math.min(Number(c.req.query('limit')) || 20, 100)
   const rows = db.query(`
-    SELECT projectId, score, band, type, stars, ts FROM (
+    SELECT projectId, score, band, type, stars, ts, targetType FROM (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY projectId ORDER BY ts DESC) AS rn
       FROM audits
     ) WHERE rn = 1
     ORDER BY score DESC, stars DESC
     LIMIT ?
   `).all(limit)
-  return c.json({ items: rows })
+  return c.json({ items: rows.map(({ targetType, ...row }) => ({ ...row, band: displayBand(targetType || 'github', row.band) })) })
 })
 
 // 复检 —— 同一个项目的「上一次 vs 这一次」。
@@ -484,7 +487,7 @@ app.get('/api/scorecard/history', (c) => {
     WHERE projectId = ? AND targetType = ?
     ORDER BY ts DESC
     LIMIT ?
-  `).all(target, type, limit)
+  `).all(target, type, limit).map((row) => ({ ...row, band: displayBand(type, row.band) }))
 
   if (!rows.length) return c.json({ target, type, points: [], changes: [], firstRun: true })
 
@@ -672,13 +675,13 @@ app.get('/og/scorecard/:owner/:repo', async (c) => {
   // dims 一并取 —— 分享卡上的雷达要画**真实**维度分，不是编的形状（见下方 radarSvg）。
   const key = `${owner}/${repo}`
   const cached = db
-    .query(`SELECT score, band, type, stars, dims FROM audits WHERE projectId = ? AND targetType = 'github' ORDER BY ts DESC LIMIT 1`)
+    .query(`SELECT score, band, type, stars, dims, targetType FROM audits WHERE projectId = ? AND targetType = 'github' ORDER BY ts DESC LIMIT 1`)
     .get(key)
     || db
-      .query(`SELECT score, band, type, stars, dims FROM audits WHERE projectId = ? ORDER BY ts DESC LIMIT 1`)
+      .query(`SELECT score, band, type, stars, dims, targetType FROM audits WHERE projectId = ? ORDER BY ts DESC LIMIT 1`)
       .get(key)
   const score = cached?.score ?? 0
-  const band = cached?.band ?? '—'
+  const band = displayBand(cached?.targetType, cached?.band) ?? '—'
   const stars = cached?.stars ?? 0
   let dims = []
   try { dims = typeof cached?.dims === 'string' ? JSON.parse(cached.dims || '[]') : (cached?.dims || []) } catch {}
@@ -1125,6 +1128,9 @@ if (HAS_DIST) {
   // public/llms.txt 会被 Vite 拷进 dist/；必须先于下面通配 catch-all 注册，
   // 否则 SPA fallback 会拿 index.html 顶替，被自己的引擎判成「空壳」。
   app.use('/llms.txt', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
+  // 自己的 sitemap.xml —— robots.txt 里声明了绝对 URL，抓取器会来取。
+  // 同样必须在 catch-all 之前注册：SPA fallback 用 index.html 顶替 XML 是线上实证过的坑。
+  app.use('/sitemap.xml', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
   app.get('*', async (c) => {
     if (c.req.path.startsWith('/api/')) return c.notFound()
     c.header('Cache-Control', 'no-cache, must-revalidate')

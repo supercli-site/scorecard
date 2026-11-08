@@ -25,12 +25,14 @@ const PERPLEXITY_URL = 'https://api.perplexity.ai/chat/completions'
 const ASK_TEMPLATE = (question) =>
   `${question}\n\n用两三句话直接回答，不要客套。`
 
+import { displayBand, GEO_SCORE_LABELS, SCORE_HINT } from './score-labels.js'
+
 function clamp(n) { return Math.max(0, Math.min(10, n)) }
 function bandOf(score) {
-  if (score >= 8) return { label: 'AI 里有存在感', hint: '多个问题被提及并带引用' }
-  if (score >= 5) return { label: '偶尔出现，位置不稳', hint: '提到过但没进推荐位' }
-  if (score >= 2) return { label: '几乎不被提及', hint: 'AI 答这些问题时不带你' }
-  return { label: 'AI 里查不到你', hint: '所有问题都没有出现' }
+  if (score >= 8) return { label: GEO_SCORE_LABELS[0], hint: SCORE_HINT }
+  if (score >= 5) return { label: GEO_SCORE_LABELS[1], hint: SCORE_HINT }
+  if (score >= 2) return { label: GEO_SCORE_LABELS[2], hint: SCORE_HINT }
+  return { label: GEO_SCORE_LABELS[3], hint: SCORE_HINT }
 }
 
 /**
@@ -694,9 +696,12 @@ export function resolveGeoProvider(requested = '', env = process.env) {
 export function hydrateGeo(row, key) {
   let meta = {}
   try { meta = typeof row.meta === 'string' ? JSON.parse(row.meta || '{}') : row.meta || {} } catch {}
+  const band = displayBand('geo', row.band)
   return {
     ...row,
     ...meta,
+    band,
+    ...(band !== row.band ? { bandHint: SCORE_HINT } : {}),
     project: row.project || key,
     targetType: 'geo',
     type: 'geo',

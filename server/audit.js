@@ -26,6 +26,8 @@ import 'dayjs/locale/zh-cn.js'
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
+import { SCORE_HINT, SCORE_LABELS } from './score-labels.js'
+
 const GH = 'https://api.github.com'
 
 // tags API 一次取多少个。GitHub 不保证按时间或版本排序 —— golang/go 取前 10 个
@@ -35,10 +37,10 @@ const TAG_SAMPLE = 100
 
 /** 评分基准，照搬 SKILL.md「评分基准」一节 */
 export const SCORE_BANDS = [
-  { min: 9, label: '同品类头部', hint: '有渠道、有度量、发布全自动、issue 响应 < 7 天' },
-  { min: 6, label: '工程健康但分发薄弱', hint: '"好代码没人看"' },
-  { min: 3, label: '能用但门面/发布有欠账', hint: '' },
-  { min: 0, label: '个人练习仓库', hint: '' },
+  { min: 9, label: SCORE_LABELS[0], hint: SCORE_HINT },
+  { min: 6, label: SCORE_LABELS[1], hint: SCORE_HINT },
+  { min: 3, label: SCORE_LABELS[2], hint: SCORE_HINT },
+  { min: 0, label: SCORE_LABELS[3], hint: SCORE_HINT },
 ]
 
 export const bandOf = (score) => SCORE_BANDS.find((b) => score >= b.min) || SCORE_BANDS[SCORE_BANDS.length - 1]

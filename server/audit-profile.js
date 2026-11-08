@@ -47,11 +47,13 @@ function normalizeDim(score, unv) {
   return clamp((score / denom) * 10)
 }
 
+import { SCORE_HINT, SCORE_LABELS } from './score-labels.js'
+
 function bandOf(score) {
-  if (score >= 9) return { label: '简历级个人主页', hint: '身份、作品、可视化、活跃度都在线 —— 招聘方 10 秒内能看懂你是谁' }
-  if (score >= 6) return { label: '有模有样、可视化可补', hint: '基础资料在，README 视觉层还没发挥首页的表达力' }
-  if (score >= 3) return { label: '资料不全的草稿', hint: '' }
-  return { label: '还是一块白板', hint: '' }
+  if (score >= 9) return { label: SCORE_LABELS[0], hint: SCORE_HINT }
+  if (score >= 6) return { label: SCORE_LABELS[1], hint: SCORE_HINT }
+  if (score >= 3) return { label: SCORE_LABELS[2], hint: SCORE_HINT }
+  return { label: SCORE_LABELS[3], hint: SCORE_HINT }
 }
 
 /** README 里的自我介绍信号 —— 首页简历至少要回答「我是谁 / 在做什么」 */

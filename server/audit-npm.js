@@ -18,6 +18,8 @@
  *   ⑦ AI 可读性   — 结构化 README、示例、机器可读字段
  */
 
+import { SCORE_HINT, SCORE_LABELS } from './score-labels.js'
+
 const REGISTRY = 'https://registry.npmjs.org'
 const DOWNLOADS_API = 'https://api.npmjs.org/downloads'
 
@@ -33,11 +35,9 @@ function normalizeDim(score, unv) {
   return clamp((score / denom) * 10)
 }
 
-function bandOf(score) {
-  if (score >= 9) return { label: '同品类头部', hint: '依赖少、周下载高、维护活跃、类型完备' }
-  if (score >= 6) return { label: '可放心使用', hint: '维护活跃、文档齐全' }
-  if (score >= 3) return { label: '能用但有欠账', hint: '' }
-  return { label: '谨慎使用', hint: '' }
+export function bandOf(score) {
+  const index = score >= 9 ? 0 : score >= 6 ? 1 : score >= 3 ? 2 : 3
+  return { label: SCORE_LABELS[index], hint: SCORE_HINT }
 }
 
 /** 检测 npm 包页是否真的是 SPA fallback（dist 路径的 tarball HTML） */

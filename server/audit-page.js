@@ -30,11 +30,13 @@ function normalizeDim(score, unv) {
   return clamp((score / denom) * 10)
 }
 
+import { SCORE_HINT, SCORE_LABELS } from './score-labels.js'
+
 function bandOf(score) {
-  if (score >= 9) return { label: 'AI 与人类都友好', hint: 'robots / llms / schema.org / MCP 一应俱全' }
-  if (score >= 6) return { label: '可访问、需补 AI 端', hint: '基础可用，但 AI 友好性还差一截' }
-  if (score >= 3) return { label: '能打开但欠账多', hint: '' }
-  return { label: '站点对 AI 不友好', hint: '' }
+  if (score >= 9) return { label: SCORE_LABELS[0], hint: SCORE_HINT }
+  if (score >= 6) return { label: SCORE_LABELS[1], hint: SCORE_HINT }
+  if (score >= 3) return { label: SCORE_LABELS[2], hint: SCORE_HINT }
+  return { label: SCORE_LABELS[3], hint: SCORE_HINT }
 }
 
 function looksLikeHtml(text) {
