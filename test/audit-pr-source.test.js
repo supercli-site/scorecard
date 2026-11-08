@@ -150,15 +150,25 @@ test('README 中 API 参考链接计为文档证据但保留访问人工核验',
 })
 
 test('普通 rapid 指南链接不会被误认作 API 文档', async () => {
-  const f = fixture({ readme: '## Quick start\n[Rapid guide](https://example.com/guide)' })
+  const f = fixture({ readme: '## Rapid guide\n[Rapid guide](https://example.com/guide)' })
   try {
     const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
-    expect(report.dims.find(d => d.key === 'docs').evidence.join(' ')).not.toContain('链接到 API/配置参考')
+    const evidence = report.dims.find(d => d.key === 'docs').evidence.join(' ')
+    expect(evidence).not.toContain('链接到 API/配置参考')
+    expect(evidence).not.toContain('有 API/配置章节')
+  } finally { f.restore() }
+})
+
+test('卸载章节不会被误认为安装章节', async () => {
+  const f = fixture({ readme: '## Uninstall\nRemove the package.' })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    expect(report.dims.find(d => d.key === 'docs').evidence.join(' ')).not.toContain('有安装章节')
   } finally { f.restore() }
 })
 
 test('没有包名的安装命令不会被识别为完整安装路径', async () => {
-  const f = fixture({ readme: '## 一分钟接入\n\n```sh\npnpm add -D\n```' })
+  const f = fixture({ readme: '## 一分钟接入\n\npnpm add -D\r\nThis installs the plugin.' })
   try {
     const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
     expect(report.dims.find(d => d.key === 'distribution').gaps.join(' ')).toContain('找不到')

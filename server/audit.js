@@ -394,7 +394,7 @@ const MANIFESTS = [
 
 /** README 里的安装命令 —— 「陌生人能不能装上」最直接的证据，且不用多打一次 API */
 const INSTALL_HINTS = [
-  { re: /\b(?:npm|pnpm|yarn|bun)\s+(?:i|install|add)\s+(?:(?:-[DSPOgE]|--(?:save-dev|save-prod|save-optional|global|exact|dev))\s+)*[@\w][\w./@-]*/i, how: 'npm 系安装命令' },
+  { re: /\b(?:npm|pnpm|yarn|bun)[ \t]+(?:i|install|add)[ \t]+(?:(?:-[DSPOgE]|--(?:save-dev|save-prod|save-optional|global|exact|dev))[ \t]+)*[@\w][\w./@-]*/i, how: 'npm 系安装命令' },
   { re: /\bpip3?\s+install\s+[\w.[\]-]+/i, how: 'pip 安装命令' },
   { re: /\b(?:uv|pipx)\s+(?:pip\s+)?install\s+[\w.-]+/i, how: 'uv/pipx 安装命令' },
   { re: /\bcargo\s+(?:add|install)\s+[\w-]+/i, how: 'cargo 安装命令' },
@@ -844,13 +844,13 @@ export async function auditProject({ owner, repo, token, source }) {
     } else {
       if (readme.length > 800) { ev.push(`README ${readme.length} 字符`); score += 2 }
       else gaps.push(`README 只有 ${readme.length} 字符，撑不起「这是什么、怎么装、怎么用」`)
-      sec('install|安装|部署|上手|(?:快速|一分钟|一键)接入') ? (score += 2, ev.push('有安装章节')) : gaps.push('README 没有安装章节')
+      sec('\\binstall(?:ation)?\\b|安装|部署|上手|(?:快速|一分钟|一键)接入') ? (score += 2, ev.push('有安装章节')) : gaps.push('README 没有安装章节')
       if (sec('usage|quick\\s*start|getting\\s*started|快速(?:开始|上手|安装)|(?:快速|一分钟|一键)接入|使用|用法|怎么用')) {
         score += 2; ev.push('有快速开始/使用章节')
       } else if (DSH_GUI_INSTALL.test(readme) && /(?:重启|restart)[^\n]{0,80}(?:点|点击|打开|click|open)/i.test(readme)) {
         unv += 2; manual.push('安装说明中包含后续操作，需人工核实能否完成首次使用 —— 这 2 分未计入')
       } else gaps.push('README 没有快速开始')
-      if (sec('api|配置|config|options|参数|选项|自定义')) {
+      if (sec('\\bapi\\b|配置|config|options|参数|选项|自定义')) {
         score += 1.5; ev.push('有 API/配置章节')
       } else if (/\[[^\]\n]*(?:\bapi\b|配置参考|configuration reference)[^\]\n]*\]\((?:https?:\/\/|\.{1,2}\/|\/)[^)\s]+\)/i.test(readme)) {
         score += 1.5; ev.push('README 链接到 API/配置参考')
