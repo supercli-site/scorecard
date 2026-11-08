@@ -11,17 +11,17 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Set up Bun
-      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      with:
-        bun-version: '1.4.0'
-    - name: Install the pinned Scorecard dependencies
+    - name: Install the locked scoring runtime
       shell: bash
-      run: bun install --frozen-lockfile --cwd "$GITHUB_ACTION_PATH"
+      run: |
+        node -e "if (+process.versions.node.split('.')[0] < 20) throw new Error('Node.js 20 or newer is required')"
+        npm ci --prefix "$GITHUB_ACTION_PATH/action-runtime" --ignore-scripts --no-audit --no-fund
+        test ! -e "$GITHUB_ACTION_PATH/node_modules" && test ! -L "$GITHUB_ACTION_PATH/node_modules"
+        ln -s "$GITHUB_ACTION_PATH/action-runtime/node_modules" "$GITHUB_ACTION_PATH/node_modules"
     - name: Audit PR head
       shell: bash
       env:
         INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
         INPUT_COMMENT: ${{ inputs.comment }}
         SCORECARD_ACTION_REF: ${{ github.action_ref }}
-      run: bun "$GITHUB_ACTION_PATH/bin/pr-scorecard.mjs"
+      run: node "$GITHUB_ACTION_PATH/bin/pr-scorecard.mjs"

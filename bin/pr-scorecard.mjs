@@ -1,5 +1,6 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { readFile, appendFile } from 'node:fs/promises'
+import { pathToFileURL } from 'node:url'
 import { auditProject } from '../server/audit.js'
 
 const REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
@@ -121,7 +122,7 @@ export async function main(env = process.env) {
   return { score: report.score, sha: context.sha }
 }
 
-if (import.meta.main) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().then((result) => console.log(`Scorecard audit complete: ${result.score}/10 at ${result.sha}`)).catch((error) => {
     console.error(`Scorecard audit unavailable: ${error.message}`)
     process.exitCode = 1

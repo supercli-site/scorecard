@@ -1,0 +1,9 @@
+{
+  "name": "scorecard-pr-action-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal locked runtime dependencies for the Scorecard PR Action",
+  "dependencies": {
+    "dayjs": "1.11.23"
+  }
+}
