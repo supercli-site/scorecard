@@ -16,6 +16,3 @@ jobs:
         with:
           github-token: ${{ github.token }}
           comment: 'true'
-
-
-
