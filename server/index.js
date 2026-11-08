@@ -21,6 +21,8 @@ import { auditPage, reportMarkdown as reportMarkdownPage } from './audit-page.js
 import { auditProfile, reportMarkdown as reportMarkdownProfile, normalizeProfileTarget } from './audit-profile.js'
 import { auditGeo, reportMarkdown as reportMarkdownGeo, geoProviderStatus, hydrateGeo, resolveGeoProvider } from './audit-geo.js'
 import { compareReports, compareMarkdown } from './compare.js'
+import { displayBand, SCORE_HINT } from './score-labels.js'
+import { sitemapHandler } from './sitemap.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -28,7 +30,7 @@ const ROOT = join(__dirname, '..')
 const PORT = Number(process.env.SCORECARD_PORT || process.env.PORT || 54445)
 const HOST = process.env.SCORECARD_HOST || process.env.HOST || '0.0.0.0'
 const DATA_DIR = process.env.SCORECARD_DATA_DIR || join(ROOT, 'data')
-const DIST_DIR = join(ROOT, 'dist')
+const DIST_DIR = process.env.SCORECARD_DIST_DIR || join(ROOT, 'dist')
 const HAS_DIST = existsSync(join(DIST_DIR, 'index.html'))
 
 // 品牌与站点地址集中在这里 —— OG 图、CTA 文案都从这两个常量取。
@@ -120,6 +122,8 @@ function hydrate(row, key, type = 'github') {
     ...meta,
     project: row.project || key,
     targetType: row.targetType || type,
+    band: displayBand(type, row.band),
+    ...(displayBand(type, row.band) !== row.band ? { bandHint: SCORE_HINT } : {}),
     dims: typeof row.dims === 'string' ? JSON.parse(row.dims || '[]') : row.dims || [],
     todos: typeof row.todos === 'string' ? JSON.parse(row.todos || '[]') : row.todos || []
   }
@@ -452,14 +456,14 @@ app.get('/api/scorecard/stats', (c) => {
 app.get('/api/scorecard/leaderboard', (c) => {
   const limit = Math.min(Number(c.req.query('limit')) || 20, 100)
   const rows = db.query(`
-    SELECT projectId, score, band, type, stars, ts FROM (
+    SELECT projectId, score, band, type, stars, ts, targetType FROM (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY projectId ORDER BY ts DESC) AS rn
       FROM audits
     ) WHERE rn = 1
     ORDER BY score DESC, stars DESC
     LIMIT ?
   `).all(limit)
-  return c.json({ items: rows })
+  return c.json({ items: rows.map(({ targetType, ...row }) => ({ ...row, band: displayBand(targetType || 'github', row.band) })) })
 })
 
 // 复检 —— 同一个项目的「上一次 vs 这一次」。
@@ -484,7 +488,7 @@ app.get('/api/scorecard/history', (c) => {
     WHERE projectId = ? AND targetType = ?
     ORDER BY ts DESC
     LIMIT ?
-  `).all(target, type, limit)
+  `).all(target, type, limit).map((row) => ({ ...row, band: displayBand(type, row.band) }))
 
   if (!rows.length) return c.json({ target, type, points: [], changes: [], firstRun: true })
 
@@ -668,25 +672,23 @@ app.get('/og/scorecard/:owner/:repo', async (c) => {
   const repo = c.req.param('repo').replace(/\.git$/, '')
   if (!/^[\w.-]+\/[\w.-]+$/.test(`${owner}/${repo}`)) return c.text('bad repo', 400)
 
-  // 从缓存拿最近一次结果；没缓存就 0 分兜底。
-  // dims 一并取 —— 分享卡上的雷达要画**真实**维度分，不是编的形状（见下方 radarSvg）。
+  // GitHub 分享卡只读 GitHub 报告；未知不能借用同名 npm/GEO 结果，也不能显示成 0 分。
   const key = `${owner}/${repo}`
   const cached = db
-    .query(`SELECT score, band, type, stars, dims FROM audits WHERE projectId = ? AND targetType = 'github' ORDER BY ts DESC LIMIT 1`)
+    .query(`SELECT score, band, type, stars, dims, targetType FROM audits WHERE projectId = ? AND targetType = 'github' ORDER BY ts DESC LIMIT 1`)
     .get(key)
-    || db
-      .query(`SELECT score, band, type, stars, dims FROM audits WHERE projectId = ? ORDER BY ts DESC LIMIT 1`)
-      .get(key)
-  const score = cached?.score ?? 0
-  const band = cached?.band ?? '—'
+  const score = typeof cached?.score === 'number' && Number.isFinite(cached.score) ? cached.score : null
+  const band = displayBand(cached?.targetType, cached?.band) ?? '—'
   const stars = cached?.stars ?? 0
   let dims = []
   try { dims = typeof cached?.dims === 'string' ? JSON.parse(cached.dims || '[]') : (cached?.dims || []) } catch {}
   const scoredDims = dims.filter((d) => d.score != null)
   const weakest = scoredDims.length ? [...scoredDims].sort((a, b) => a.score - b.score)[0] : null
 
-  const color = score >= 9 ? '#7d9d8c' : score >= 6 ? '#7c94ad' : score >= 3 ? '#c4a47c' : '#b08585'
+  const color = score == null ? '#8b949e' : score >= 9 ? '#7d9d8c' : score >= 6 ? '#7c94ad' : score >= 3 ? '#c4a47c' : '#b08585'
+  const scoreMarkup = score == null ? '<tspan font-size="54" letter-spacing="0">暂无评分</tspan>' : `${score}<tspan font-size="48" font-weight="500" fill="#6e7681" dx="6">/10</tspan>`
   const starLabel = stars === 1 ? '1 star' : `${stars} stars`
+  const infoLine = cached ? `★ ${starLabel} · type: ${cached.type || 'unknown'}` : '尚未生成 GitHub 质检报告'
   // 「核实了几维」比「几分」更能说明这份报告的可信度 —— 公开列出，不藏。
   const verifyLine = scoredDims.length
     ? `已核实 ${scoredDims.length}/${dims.length} 维` + (weakest ? ` · 最弱：${weakest.name} ${weakest.score}` : '')
@@ -712,11 +714,11 @@ app.get('/og/scorecard/:owner/:repo', async (c) => {
 
     <!-- big score：/10 跟着分数走（tspan），不手动算 x ——
          比例字体下 "8.1" 的实际宽度跟字符数对不上，手算 x 会让 /10 压住分数 -->
-    <text x="60" y="380" font-size="180" font-weight="800" fill="${color}" letter-spacing="-4">${score}<tspan font-size="48" font-weight="500" fill="#6e7681" dx="6">/10</tspan></text>
+    <text x="60" y="380" font-size="180" font-weight="800" fill="${color}" letter-spacing="-4">${scoreMarkup}</text>
 
     <!-- band -->
     <text x="60" y="430" font-size="26" font-weight="600" fill="${color}">${escapeXml(band)}</text>
-    <text x="60" y="464" font-size="20" fill="#8b949e">★ ${starLabel} · type: ${escapeXml(cached?.type || 'unknown')}</text>
+    <text x="60" y="464" font-size="20" fill="#8b949e">${escapeXml(infoLine)}</text>
 
     <!-- 核实口径：公开说明这份分数覆盖了几维 -->
     <text x="60" y="500" font-size="19" fill="#6e7681">${escapeXml(verifyLine)}</text>
@@ -1125,6 +1127,9 @@ if (HAS_DIST) {
   // public/llms.txt 会被 Vite 拷进 dist/；必须先于下面通配 catch-all 注册，
   // 否则 SPA fallback 会拿 index.html 顶替，被自己的引擎判成「空壳」。
   app.use('/llms.txt', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
+  // 自己的 sitemap.xml —— robots.txt 里声明了绝对 URL，抓取器会来取。
+  // 同样必须在 catch-all 之前注册：SPA fallback 用 index.html 顶替 XML 是线上实证过的坑。
+  app.get('/sitemap.xml', sitemapHandler(DIST_DIR))
   app.get('*', async (c) => {
     if (c.req.path.startsWith('/api/')) return c.notFound()
     c.header('Cache-Control', 'no-cache, must-revalidate')
