@@ -243,7 +243,11 @@ scorecard geo --brand 山鬼映画 --provider magpie
 
 ## 快速开始
 
+先克隆仓库并进入项目目录，安装 [Bun](https://bun.sh/) 后运行：
+
 ```bash
+git clone https://github.com/supercli-site/scorecard.git
+cd scorecard
 bun install          # 或 npm install
 bun run build        # 构建前端到 dist/
 bun run server       # 起后端（默认 :54445），自动托管 dist/
@@ -271,28 +275,31 @@ token 只在服务端使用，从不下发给前端。
 
 ## CLI
 
+在上面克隆的仓库目录中，可以直接用 Node.js 运行命令行入口，无需先注册全局命令：
+
+```bash
+node bin/scorecard.mjs supercli-site/scorecard --json
+```
+
+CLI 默认访问线上免费实例 `https://scorecard.webkubor.online`；要使用自托管服务，在命令后加 `--api http://127.0.0.1:54445`。在仓库目录内运行下面的命令：
+
 ```bash
 # 三路审计（type 推断：URL=page，pkg 名=npm，owner/repo=github）
-scorecard supercli-site/scorecard                    # GitHub 仓库（9 维）
-scorecard react --type npm                      # npm 包（7 维）
-scorecard https://example.com --type page       # 网页（9 维）
+node bin/scorecard.mjs supercli-site/scorecard
+node bin/scorecard.mjs react --type npm
+node bin/scorecard.mjs https://example.com --type page
 
 # 同一类两个目标对比
-scorecard --compare-a https://test.example.com \
-          --compare-b https://example.com \
-          --type page
+node bin/scorecard.mjs --compare-a https://test.example.com \
+  --compare-b https://example.com --type page
 
-# 报告 Markdown
-scorecard supercli-site/scorecard --md > report.md
-
-# CI 闸门
-scorecard react --type npm --min 6
-
-# 跳过 30 分钟缓存
-scorecard supercli-site/scorecard --fresh
+# 报告 Markdown、CI 闸门及跳过 30 分钟缓存
+node bin/scorecard.mjs supercli-site/scorecard --md > report.md
+node bin/scorecard.mjs react --type npm --min 6
+node bin/scorecard.mjs supercli-site/scorecard --fresh
 
 # GEO：品牌在 AI 答案里的可见度（--q 可重复给多条问题）
-scorecard geo --brand museav --domain museav.com \
+node bin/scorecard.mjs geo --brand museav --domain museav.com \
   --q "有哪些好用的 AI 视频生成工具" \
   --q "有哪些能批量做小红书内容的工具" \
   --competitors runway,pika --provider perplexity
