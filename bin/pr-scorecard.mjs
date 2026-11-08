@@ -32,14 +32,15 @@ export function renderSummary(report, context) {
     '',
     `Rules: Scorecard ${safe(report.rulesVersion || 'unknown')} · Scored ${safe(report.scoredCount)} of ${(report.dims || []).length} dimensions. Partial or unverifiable checks are listed below.`,
     '',
-    '> File checks use this exact PR head. Stars, issues, releases, CI and other repository metadata describe the base repository at scan time. This is a maturity audit, not a security scan or proof that every changed line works.',
+    '> File checks use this exact PR head. Stars, issues, releases, CI and other repository metadata describe the base repository at scan time. The PR audit does not contact the project homepage or package registries. This is a maturity audit, not a security scan or proof that every changed line works.',
     '',
-    '| Dimension | Score | Next check |',
-    '| --- | ---: | --- |',
+    '| Dimension | Score | Checkable weight | Next check |',
+    '| --- | ---: | ---: | --- |',
   ]
   for (const dim of report.dims || []) {
     const score = typeof dim.score === 'number' && Number.isFinite(dim.score) ? `${dim.score.toFixed(1)} / 10` : 'Unverifiable'
-    lines.push(`| ${safe(dim.name)} | ${score} | ${safe((dim.gaps || [])[0] || (dim.manual || [])[0] || 'No automatic gap found')} |`)
+    const remaining = typeof dim.unverifiable === 'number' && Number.isFinite(dim.unverifiable) ? `${Math.max(0, 10 - dim.unverifiable).toFixed(1)} / 10` : 'Unknown'
+    lines.push(`| ${safe(dim.name)} | ${score} | ${remaining} | ${safe((dim.gaps || [])[0] || (dim.manual || [])[0] || 'No automatic gap found')} |`)
   }
   const manual = (report.dims || []).flatMap((dim) => (dim.manual || []).map((item) => `- **${safe(dim.name)}**: ${safe(item)}`))
   if (manual.length) lines.push('', '<details><summary>Manual and unverifiable checks</summary>', '', ...manual, '', '</details>')
@@ -113,8 +114,8 @@ export async function main(env = process.env) {
       await upsertComment(context, env.INPUT_GITHUB_TOKEN, summary)
     } catch (error) {
       if (error.status !== 403) throw error
-      await appendFile(env.GITHUB_STEP_SUMMARY, '\n> The report was not posted as a PR comment: this token has no permission. The score above is available in the workflow summary.\n')
-      console.warn('Scorecard comment unavailable: GitHub token lacks permission; summary remains available.')
+      await appendFile(env.GITHUB_STEP_SUMMARY, '\n> The PR comment was not updated: GitHub returned HTTP 403 during publication. Check token permissions or rate limits. The score above remains available in this workflow summary.\n')
+      console.warn('Scorecard comment unavailable: GitHub returned HTTP 403; summary remains available.')
     }
   }
   return { score: report.score, sha: context.sha }

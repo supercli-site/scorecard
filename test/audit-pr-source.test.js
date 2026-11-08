@@ -14,7 +14,7 @@ function fixture({ headContents = true, headStatus = 200, failPath = '', failSta
     const ref = parsed.searchParams.get('ref')
     calls.push({ path, ref, hostname: parsed.hostname })
     const json = (data, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => data, text: async () => JSON.stringify(data) })
-    if (ref && sourcePath.endsWith(failPath) && failPath) return json({ message: 'unavailable' }, failStatus)
+    if (sourcePath.endsWith(failPath) && failPath) return json({ message: 'unavailable' }, failStatus)
     if (path === '/repos/example/project') {
       return json({ name: 'project', default_branch: 'main', description: 'A CLI tool for developers', topics: ['cli'], pushed_at: new Date().toISOString(), stargazers_count: 12, license: { spdx_id: 'MIT' }, homepage: 'https://example.com', archived: false, open_issues_count: 1 })
     }
@@ -91,6 +91,15 @@ test('单个 PR 文件读取遇到限流或服务故障时中止评分', async (
     const f = fixture({ failPath, failStatus: status })
     try {
       await expect(auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })).rejects.toThrow(/PR head/)
+    } finally { f.restore() }
+  }
+})
+
+test('实时仓库元数据读取失败不会伪装成没有 tag、CI 或 issue', async () => {
+  for (const [failPath, failStatus] of [['/tags', 403], ['/releases', 429], ['/actions/runs', 503], ['/issues', 403]]) {
+    const f = fixture({ failPath, failStatus })
+    try {
+      await expect(auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })).rejects.toThrow(/metadata unavailable/)
     } finally { f.restore() }
   }
 })

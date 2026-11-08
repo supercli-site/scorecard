@@ -448,6 +448,11 @@ export async function auditProject({ owner, repo, token, source }) {
   if (source && !readmeRes.ok && readmeRes.status !== 404) {
     throw new Error(`PR head README unavailable (HTTP ${readmeRes.status})`)
   }
+  if (source) {
+    for (const [name, result] of [['releases', releases], ['tags', tags], ['actions', runs], ['issues', openIssues]]) {
+      if (!result.ok) throw new Error(`Live ${name} metadata unavailable (HTTP ${result.status})`)
+    }
+  }
 
   const r = repoRes.data
   const readme = readmeRes.ok ? readmeRes.data : ''
