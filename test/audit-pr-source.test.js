@@ -124,6 +124,57 @@ test('来源必须是完整提交 SHA 与合法仓库名', async () => {
   } finally { f.restore() }
 })
 
+test('带开发依赖标志的 npm 系命令与一分钟接入章节可被识别', async () => {
+  for (const command of ['pnpm add -D vite-plugin-agent-eyes', 'npm install --save-dev pkg', 'yarn add --dev pkg', 'bun add -D pkg']) {
+    const f = fixture({ readme: `## 一分钟接入\n\n\`\`\`sh\n${command}\n\`\`\`` })
+    try {
+      const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+      const distribution = report.dims.find(d => d.key === 'distribution')
+      const docs = report.dims.find(d => d.key === 'docs')
+      expect(distribution.evidence.join(' ')).toContain('npm 系安装命令')
+      expect(docs.gaps.join(' ')).not.toContain('没有安装章节')
+      expect(docs.gaps.join(' ')).not.toContain('没有快速开始')
+    } finally { f.restore() }
+  }
+})
+
+test('README 中 API 参考链接计为文档证据但保留访问人工核验', async () => {
+  const f = fixture({ readme: '## 一分钟接入\n```sh\npnpm add -D vite-plugin-agent-eyes\n```\n[完整 API](https://example.com/api/reference)' })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    const docs = report.dims.find(d => d.key === 'docs')
+    expect(docs.evidence.join(' ')).toContain('链接到 API/配置参考')
+    expect(docs.gaps.join(' ')).not.toContain('没有 API/配置参考')
+    expect(docs.manual.join(' ')).toContain('链接可访问')
+  } finally { f.restore() }
+})
+
+test('普通 rapid 指南链接不会被误认作 API 文档', async () => {
+  const f = fixture({ readme: '## Rapid guide\n[Rapid guide](https://example.com/guide)' })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    const evidence = report.dims.find(d => d.key === 'docs').evidence.join(' ')
+    expect(evidence).not.toContain('链接到 API/配置参考')
+    expect(evidence).not.toContain('有 API/配置章节')
+  } finally { f.restore() }
+})
+
+test('卸载章节不会被误认为安装章节', async () => {
+  const f = fixture({ readme: '## Uninstall\nRemove the package.' })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    expect(report.dims.find(d => d.key === 'docs').evidence.join(' ')).not.toContain('有安装章节')
+  } finally { f.restore() }
+})
+
+test('没有包名的安装命令不会被识别为完整安装路径', async () => {
+  const f = fixture({ readme: '## 一分钟接入\n\npnpm add -D\r\nThis installs the plugin.' })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    expect(report.dims.find(d => d.key === 'distribution').gaps.join(' ')).toContain('找不到')
+  } finally { f.restore() }
+})
+
 test('DSH 界面安装说明不被误判为缺少命令，首次操作保留人工核验', async () => {
   const f = fixture({ readme: '### 安装\n在 DeepSeek Harness 的「插件」里搜索 **`example`** 并安装；按提示重启后，点顶栏的按钮。' })
   try {
