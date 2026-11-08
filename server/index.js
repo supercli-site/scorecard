@@ -672,16 +672,12 @@ app.get('/og/scorecard/:owner/:repo', async (c) => {
   const repo = c.req.param('repo').replace(/\.git$/, '')
   if (!/^[\w.-]+\/[\w.-]+$/.test(`${owner}/${repo}`)) return c.text('bad repo', 400)
 
-  // 从缓存拿最近一次结果；没缓存就 0 分兜底。
-  // dims 一并取 —— 分享卡上的雷达要画**真实**维度分，不是编的形状（见下方 radarSvg）。
+  // GitHub 分享卡只读 GitHub 报告；未知不能借用同名 npm/GEO 结果，也不能显示成 0 分。
   const key = `${owner}/${repo}`
   const cached = db
     .query(`SELECT score, band, type, stars, dims, targetType FROM audits WHERE projectId = ? AND targetType = 'github' ORDER BY ts DESC LIMIT 1`)
     .get(key)
-    || db
-      .query(`SELECT score, band, type, stars, dims, targetType FROM audits WHERE projectId = ? ORDER BY ts DESC LIMIT 1`)
-      .get(key)
-  const score = cached?.score ?? 0
+  const score = typeof cached?.score === 'number' && Number.isFinite(cached.score) ? cached.score : null
   const band = displayBand(cached?.targetType, cached?.band) ?? '—'
   const stars = cached?.stars ?? 0
   let dims = []
@@ -689,8 +685,10 @@ app.get('/og/scorecard/:owner/:repo', async (c) => {
   const scoredDims = dims.filter((d) => d.score != null)
   const weakest = scoredDims.length ? [...scoredDims].sort((a, b) => a.score - b.score)[0] : null
 
-  const color = score >= 9 ? '#7d9d8c' : score >= 6 ? '#7c94ad' : score >= 3 ? '#c4a47c' : '#b08585'
+  const color = score == null ? '#8b949e' : score >= 9 ? '#7d9d8c' : score >= 6 ? '#7c94ad' : score >= 3 ? '#c4a47c' : '#b08585'
+  const scoreMarkup = score == null ? '<tspan font-size="54" letter-spacing="0">暂无评分</tspan>' : `${score}<tspan font-size="48" font-weight="500" fill="#6e7681" dx="6">/10</tspan>`
   const starLabel = stars === 1 ? '1 star' : `${stars} stars`
+  const infoLine = cached ? `★ ${starLabel} · type: ${cached.type || 'unknown'}` : '尚未生成 GitHub 质检报告'
   // 「核实了几维」比「几分」更能说明这份报告的可信度 —— 公开列出，不藏。
   const verifyLine = scoredDims.length
     ? `已核实 ${scoredDims.length}/${dims.length} 维` + (weakest ? ` · 最弱：${weakest.name} ${weakest.score}` : '')
@@ -716,11 +714,11 @@ app.get('/og/scorecard/:owner/:repo', async (c) => {
 
     <!-- big score：/10 跟着分数走（tspan），不手动算 x ——
          比例字体下 "8.1" 的实际宽度跟字符数对不上，手算 x 会让 /10 压住分数 -->
-    <text x="60" y="380" font-size="180" font-weight="800" fill="${color}" letter-spacing="-4">${score}<tspan font-size="48" font-weight="500" fill="#6e7681" dx="6">/10</tspan></text>
+    <text x="60" y="380" font-size="180" font-weight="800" fill="${color}" letter-spacing="-4">${scoreMarkup}</text>
 
     <!-- band -->
     <text x="60" y="430" font-size="26" font-weight="600" fill="${color}">${escapeXml(band)}</text>
-    <text x="60" y="464" font-size="20" fill="#8b949e">★ ${starLabel} · type: ${escapeXml(cached?.type || 'unknown')}</text>
+    <text x="60" y="464" font-size="20" fill="#8b949e">${escapeXml(infoLine)}</text>
 
     <!-- 核实口径：公开说明这份分数覆盖了几维 -->
     <text x="60" y="500" font-size="19" fill="#6e7681">${escapeXml(verifyLine)}</text>

@@ -70,6 +70,17 @@ test('缓存报告按请求类型映射，不被其它类型的历史覆盖', as
   expect(json.report.band).toBe(SCORE_LABELS[0])
   expect(json.report.bandHint).toContain('未核实项不计入评分')})
 
+test('GitHub 分享图不会拿同名 npm 记录冒充，也不会把未知显示为零分', async () => {
+  insert.run('only/npm', 'npm', new Date().toISOString(), 8.7, '可放心使用', 'npm', 12, '[]', '[]', '{}')
+  const response = await app.request('/og/scorecard/only/npm?fmt=svg')
+  expect(response.status).toBe(200)
+  const svg = await response.text()
+  expect(svg).toContain('暂无评分')
+  expect(svg).toContain('尚未生成 GitHub 质检报告')
+  expect(svg).not.toContain('8.7')
+  expect(svg).not.toContain('0<tspan')
+})
+
 test('数据库里的旧标签保持原样，不做数据迁移', () => {
   const rows = db.query('SELECT projectId,targetType,band FROM audits WHERE projectId = ?').all('same/key')
   expect(Object.fromEntries(rows.map((r) => [r.targetType, r.band]))).toEqual({
