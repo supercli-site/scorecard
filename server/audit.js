@@ -109,7 +109,7 @@ async function readCommunityFiles(sourcePath, token, rootEntries) {
   for (const dir of ['.github', 'docs']) {
     if (!rootEntries.some((entry) => entry.name === dir && entry.type === 'dir')) continue
     const result = await gh(sourcePath(`contents/${dir}`), token)
-    if (!result.ok || !Array.isArray(result.data)) throw new Error(`PR head ${dir} directory unavailable (HTTP ${result.status})`)
+    if (!result.ok || !Array.isArray(result.data) || result.data.length >= 1000) throw new Error(`PR head ${dir} directory unavailable or possibly truncated (HTTP ${result.status})`)
     for (const entry of result.data) paths.push(`${dir}/${entry.name}`)
   }
   const has = (pattern) => paths.some((path) => pattern.test(path))
@@ -440,10 +440,10 @@ export async function auditProject({ owner, repo, token, source }) {
   }
 
   // In a PR report an inaccessible head is not an empty project and must never receive a score.
-  if (source && (!contentsRes.ok || !Array.isArray(contentsRes.data))) {
+  if (source && (!contentsRes.ok || !Array.isArray(contentsRes.data) || contentsRes.data.length >= 1000)) {
     const s = contentsRes.status
     const errorStatus = s === 404 || s === 410 ? 404 : s === 403 || s === 429 ? 429 : s < 500 ? 400 : 503
-    return { error: `PR head content unavailable HTTP ${s}`, errorStatus, score: null }
+    return { error: `PR head content unavailable or possibly truncated (HTTP ${s})`, errorStatus: contentsRes.ok ? 400 : errorStatus, score: null }
   }
   if (source && !readmeRes.ok && readmeRes.status !== 404) {
     throw new Error(`PR head README unavailable (HTTP ${readmeRes.status})`)
@@ -451,6 +451,9 @@ export async function auditProject({ owner, repo, token, source }) {
   if (source) {
     for (const [name, result] of [['releases', releases], ['tags', tags], ['actions', runs], ['issues', openIssues]]) {
       if (!result.ok) throw new Error(`Live ${name} metadata unavailable (HTTP ${result.status})`)
+    }
+    if (!Array.isArray(releases.data) || !Array.isArray(tags.data) || !Array.isArray(runs.data?.workflow_runs) || !Array.isArray(openIssues.data)) {
+      throw new Error('Live repository metadata has an unexpected shape')
     }
   }
 
@@ -467,7 +470,7 @@ export async function auditProject({ owner, repo, token, source }) {
   if (!hasIssueTemplate) {
     if (dirs.includes('.github') || files.includes('.github')) {
       const it = await gh(sourcePath('contents/.github/ISSUE_TEMPLATE'), token)
-      if (source && !it.ok && it.status !== 404) throw new Error(`PR head issue template unavailable (HTTP ${it.status})`)
+      if (source && ((!it.ok && it.status !== 404) || (it.ok && Array.isArray(it.data) && it.data.length >= 1000))) throw new Error(`PR head issue template unavailable or possibly truncated (HTTP ${it.status})`)
       if (it.ok && Array.isArray(it.data) && it.data.length > 0) hasIssueTemplate = true
     }
     if (!hasIssueTemplate) {
@@ -880,13 +883,13 @@ export async function auditProject({ owner, repo, token, source }) {
     // 原先把它记成 gap 并扣 3 分，等于每个被质检的项目都无谓损失 3 分，
     // 衡量的是我们的权限而不是项目本身。改为归入 manual，不扣分。
     let unv = 0
-    const traffic = await gh(`/repos/${full}/traffic/views`, token)
-    if (traffic.ok) {
+    const traffic = source ? null : await gh(`/repos/${full}/traffic/views`, token)
+    if (traffic?.ok) {
       ev.push(`近两周 ${traffic.data.count} 次浏览 / ${traffic.data.uniques} 独立访客`)
       score += 2
     } else {
       unv += 2
-      manual.push('近两周 traffic（需仓库 push 权限，公共质检读不到 —— 请自己在 Insights → Traffic 看）')
+      manual.push(source ? 'PR 公开报告不读取私有仓库流量统计，这 2 分未计入' : '近两周 traffic（需仓库 push 权限，公共质检读不到 —— 请自己在 Insights → Traffic 看）')
     }
 
     // 替代信号：release 产物下载量。公开可读，不需要任何权限，

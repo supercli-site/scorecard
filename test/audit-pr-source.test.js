@@ -4,7 +4,7 @@ import { auditProject } from '../server/audit.js'
 const SHA = 'a'.repeat(40)
 const OTHER_SHA = 'b'.repeat(40)
 
-function fixture({ headContents = true, headStatus = 200, failPath = '', failStatus = 403, sourceRepo = 'example/project', pkgName = 'project', hasBin = true, readme = '# Project\n\nReadme body.' } = {}) {
+function fixture({ headContents = true, headStatus = 200, truncateRoot = false, failPath = '', failStatus = 403, sourceRepo = 'example/project', pkgName = 'project', hasBin = true, readme = '# Project\n\nReadme body.' } = {}) {
   const calls = []
   const originalFetch = globalThis.fetch
   globalThis.fetch = async url => {
@@ -22,6 +22,7 @@ function fixture({ headContents = true, headStatus = 200, failPath = '', failSta
     if (sourcePath === '/repos/example/project/readme') return { ok: true, status: 200, text: async () => readme }
     if (sourcePath === '/repos/example/project/contents') {
       if (ref && !headContents) return json({ message: 'Not Found' }, headStatus)
+      if (ref && truncateRoot) return json(Array.from({ length: 1000 }, (_, i) => ({ name: `file-${i}`, type: 'file' })))
       return json([{ name: 'package.json', type: 'file' }, { name: 'README.md', type: 'file' }, ...(ref ? [{ name: 'LICENSE.md', type: 'file' }] : [])])
     }
     if (sourcePath === '/repos/example/project/contents/package.json') {
@@ -51,6 +52,7 @@ test('PR 报告把仓库文件读取固定到该提交', async () => {
     for (const read of reads) expect(read.ref).toBe(SHA)
     expect(report.source).toEqual({ repository: 'example/project', sha: SHA, files: 'commit', metadata: 'live base repository' })
     expect(f.calls.every(c => c.hostname === 'api.github.com')).toBe(true)
+    expect(f.calls.some(c => c.path.endsWith('/traffic/views'))).toBe(false)
     expect(report.dims.flatMap(d => d.manual || []).join(' ')).toContain('不向第三方 registry')
   } finally { f.restore() }
 })
@@ -83,6 +85,15 @@ test('PR 提交不可读时不得产生分数', async () => {
     expect(report.score).toBeNull()
     expect(report.errorStatus).toBe(404)
     expect(report.error).toContain('404')
+  } finally { f.restore() }
+})
+
+test('达到 GitHub 目录返回上限时不把未返回文件判为缺失', async () => {
+  const f = fixture({ truncateRoot: true })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    expect(report.score).toBeNull()
+    expect(report.error).toContain('possibly truncated')
   } finally { f.restore() }
 })
 
