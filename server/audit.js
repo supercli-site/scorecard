@@ -129,11 +129,17 @@ async function readCommunityFiles(sourcePath, token, rootEntries) {
 }
 
 /** 项目类型决定某些维度的及格线（skill 里每维都有「类型特有检查」） */
-function detectType(files, dirs, pkg, repo, owner) {
+export function detectType(files, dirs, pkg, repo, owner) {
   const identity = `${repo.description || ''} ${(repo.topics || []).join(' ')}`.toLowerCase()
   if (repo.name.toLowerCase() === owner.toLowerCase() && /github-profile|profile readme/.test(identity)) return 'profile'
   if (!pkg && dirs.length >= 8 && /image-hosting|image hosting|asset|cdn|图床|素材|静态资源/.test(identity)) return 'asset'
   const has = (n) => files.some((f) => f.toLowerCase() === n.toLowerCase())
+  // SKILL.md 可随库/插件/CLI 一起提供给 Agent，不意味着仓库本身是 skill。
+  // 只有公开发布的可执行入口或库入口/主题证据，才优先于 SKILL.md；private 工具包不算产品。
+  const publicPackage = pkg && pkg.private !== true
+  if (publicPackage && pkg.bin) return 'cli'
+  if (publicPackage && (files.some((f) => /^(theme|themes)$/i.test(f)) || /theme/i.test(pkg.name || ''))) return 'theme'
+  if (publicPackage && (pkg.main || pkg.exports)) return 'library'
   if (has('SKILL.md')) return 'skill'
   if (pkg?.bin) return 'cli'
   if (files.some((f) => /^(theme|themes)$/i.test(f)) || /theme/i.test(pkg?.name || '')) return 'theme'
