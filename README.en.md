@@ -93,6 +93,10 @@ scorecard supercli-site/scorecard --fresh
 
 The CLI just shells out to the HTTP API — agents pick this up as their default path.
 
+## PR maturity checks
+
+The [Scorecard PR Action](docs/pr-action.md) audits the exact head commit of a public pull request using the GitHub repository criteria. Reports distinguish commit-bound file evidence from live repository metadata and default to an informational workflow summary. PR code is not executed or sent to the Scorecard website.
+
 ## GitHub dims: skill as a deeper complement
 
 The GitHub-repo path also ships a Claude skill version (deeper diagnosis), complementary to the engine rather than redundant:
