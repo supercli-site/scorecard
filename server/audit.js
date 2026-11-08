@@ -105,18 +105,24 @@ export async function gh(path, token, { raw = false } = {}) {
  * 否则 PR 里新增的 LICENSE 会被算成缺失。
  */
 async function readCommunityFiles(sourcePath, token, rootEntries) {
-  const paths = [...rootEntries.filter((entry) => entry.type === 'file').map((entry) => entry.name)]
+  const entries = rootEntries.map((entry) => ({ path: entry.name, type: entry.type }))
   for (const dir of ['.github', 'docs']) {
     if (!rootEntries.some((entry) => entry.name === dir && entry.type === 'dir')) continue
     const result = await gh(sourcePath(`contents/${dir}`), token)
     if (!result.ok || !Array.isArray(result.data) || result.data.length >= 1000) throw new Error(`PR head ${dir} directory unavailable or possibly truncated (HTTP ${result.status})`)
-    for (const entry of result.data) paths.push(`${dir}/${entry.name}`)
+    for (const entry of result.data) entries.push({ path: `${dir}/${entry.name}`, type: entry.type })
   }
-  const has = (pattern) => paths.some((path) => pattern.test(path))
+  const hasFile = (pattern) => entries.some((entry) => entry.type === 'file' && pattern.test(entry.path))
+  let issueTemplate = hasFile(/^(?:\.github\/)?issue_template\.md$/i)
+  if (!issueTemplate && entries.some((entry) => entry.type === 'dir' && entry.path === '.github/ISSUE_TEMPLATE')) {
+    const templates = await gh(sourcePath('contents/.github/ISSUE_TEMPLATE'), token)
+    if (!templates.ok || !Array.isArray(templates.data) || templates.data.length >= 1000) throw new Error(`PR head issue templates unavailable or possibly truncated (HTTP ${templates.status})`)
+    issueTemplate = templates.data.some((entry) => entry.type === 'file' && /\.(?:md|ya?ml)$/i.test(entry.name) && !/^config\.ya?ml$/i.test(entry.name))
+  }
   return {
-    license: has(/^(?:(?:\.github|docs)\/)?(?:license|licence|copying)(?:\.[\w.-]+)?$/i),
-    contributing: has(/^(?:(?:\.github|docs)\/)?contributing(?:\.[\w.-]+)?$/i),
-    issue_template: has(/^(?:\.github\/)?issue_template(?:\.[\w.-]+)?$/i),
+    license: hasFile(/^(?:(?:\.github|docs)\/)?(?:license|licence|copying)(?:[._-][\w.-]+)?$/i),
+    contributing: hasFile(/^(?:(?:\.github|docs)\/)?contributing(?:[._-][\w.-]+)?$/i),
+    issue_template: issueTemplate,
   }
 }
 
@@ -467,10 +473,9 @@ export async function auditProject({ owner, repo, token, source }) {
   // 否则会把「PR 里刚补上的 LICENSE」继续判成「没有 LICENSE」。
   const cf = source ? await readCommunityFiles(sourcePath, token, entries) : (community.ok ? community.data?.files || {} : {})
   let hasIssueTemplate = !!cf.issue_template
-  if (!hasIssueTemplate) {
+  if (!hasIssueTemplate && !source) {
     if (dirs.includes('.github') || files.includes('.github')) {
       const it = await gh(sourcePath('contents/.github/ISSUE_TEMPLATE'), token)
-      if (source && ((!it.ok && it.status !== 404) || (it.ok && Array.isArray(it.data) && it.data.length >= 1000))) throw new Error(`PR head issue template unavailable or possibly truncated (HTTP ${it.status})`)
       if (it.ok && Array.isArray(it.data) && it.data.length > 0) hasIssueTemplate = true
     }
     if (!hasIssueTemplate) {

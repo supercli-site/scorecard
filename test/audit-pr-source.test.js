@@ -4,7 +4,7 @@ import { auditProject } from '../server/audit.js'
 const SHA = 'a'.repeat(40)
 const OTHER_SHA = 'b'.repeat(40)
 
-function fixture({ headContents = true, headStatus = 200, truncateRoot = false, failPath = '', failStatus = 403, sourceRepo = 'example/project', pkgName = 'project', hasBin = true, readme = '# Project\n\nReadme body.' } = {}) {
+function fixture({ headContents = true, headStatus = 200, truncateRoot = false, issueEntries = null, failPath = '', failStatus = 403, sourceRepo = 'example/project', pkgName = 'project', hasBin = true, readme = '# Project\n\nReadme body.' } = {}) {
   const calls = []
   const originalFetch = globalThis.fetch
   globalThis.fetch = async url => {
@@ -23,14 +23,15 @@ function fixture({ headContents = true, headStatus = 200, truncateRoot = false, 
     if (sourcePath === '/repos/example/project/contents') {
       if (ref && !headContents) return json({ message: 'Not Found' }, headStatus)
       if (ref && truncateRoot) return json(Array.from({ length: 1000 }, (_, i) => ({ name: `file-${i}`, type: 'file' })))
-      return json([{ name: 'package.json', type: 'file' }, { name: 'README.md', type: 'file' }, ...(ref ? [{ name: 'LICENSE.md', type: 'file' }] : [])])
+      return json([{ name: 'package.json', type: 'file' }, { name: 'README.md', type: 'file' }, ...(ref ? [{ name: 'LICENSE.md', type: 'file' }] : []), ...(issueEntries ? [{ name: '.github', type: 'dir' }] : [])])
     }
     if (sourcePath === '/repos/example/project/contents/package.json') {
       return { ok: true, status: 200, text: async () => JSON.stringify({ name: pkgName, ...(hasBin ? { bin: { project: './bin/x.js' } } : {}) }) }
     }
     if (sourcePath === '/repos/example/project/contents/LICENSE') return json({ name: 'LICENSE' }, ref ? 200 : 404)
     if (sourcePath === '/repos/example/project/contents/CONTRIBUTING.md') return json({ message: 'Not Found' }, 404)
-    if (sourcePath === '/repos/example/project/contents/.github/ISSUE_TEMPLATE') return json([{ name: 'bug.md' }])
+    if (sourcePath === '/repos/example/project/contents/.github' && issueEntries) return json([{ name: 'ISSUE_TEMPLATE', type: 'dir' }])
+    if (sourcePath === '/repos/example/project/contents/.github/ISSUE_TEMPLATE') return json(issueEntries || [{ name: 'bug.md', type: 'file' }])
     if (sourcePath === '/repos/example/project/releases') return json([])
     if (sourcePath === '/repos/example/project/tags') return json([])
     if (sourcePath === '/repos/example/project/actions/runs') return json({ workflow_runs: [] })
@@ -152,6 +153,26 @@ test('带可执行命令的主题包仍按 CLI 分类，避免错误应用主题
   try {
     const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
     expect(report.type).toBe('cli')
+  } finally { f.restore() }
+})
+
+test('只有 issue 模板目录配置文件时不误报存在模板', async () => {
+  const f = fixture({ issueEntries: [{ name: 'config.yml', type: 'file' }] })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    const community = report.dims.find(d => d.key === 'community')
+    expect(community.gaps.join(' ')).toContain('没有 issue 模板')
+    expect(community.evidence.join(' ')).not.toContain('有 issue 模板')
+  } finally { f.restore() }
+})
+
+test('真实 issue 模板按 head 提交识别', async () => {
+  const f = fixture({ issueEntries: [{ name: 'config.yml', type: 'file' }, { name: 'bug.yml', type: 'file' }] })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    const community = report.dims.find(d => d.key === 'community')
+    expect(community.evidence.join(' ')).toContain('有 issue 模板')
+    expect(f.calls.some(c => c.path.endsWith('/contents/.github/ISSUE_TEMPLATE') && c.ref === SHA)).toBe(true)
   } finally { f.restore() }
 })
 
