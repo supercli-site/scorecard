@@ -4,7 +4,7 @@
 
 ## 在公开仓库启用
 
-把以下内容保存为 `.github/workflows/scorecard.yml`。示例使用经过审阅的固定 Action 提交；升级时请审查并更新完整 SHA。这个工作流不 checkout 或执行 PR 的代码。
+把以下内容保存为 `.github/workflows/scorecard.yml`。示例使用经过审阅的固定 Action 提交；升级时请审查并更新完整 SHA。这个工作流不 checkout 或执行 PR 的代码；GitHub 托管 Ubuntu runner 自带 Node.js，其他 runner 需要 Node.js 20 及以上。Action 只安装锁定的 `dayjs` 运行依赖，并禁用安装脚本。
 
 ```yaml
 name: Scorecard PR maturity
@@ -21,7 +21,7 @@ jobs:
   maturity:
     runs-on: ubuntu-latest
     steps:
-      - uses: supercli-site/scorecard@7122c6920a7b7dfb1cad968b7f04b151cfedf8dc
+      - uses: supercli-site/scorecard@0035a31d038b45052d19c8a804797647ea0ef4ec
         with:
           github-token: ${{ github.token }}
 ```
