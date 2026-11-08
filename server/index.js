@@ -22,6 +22,7 @@ import { auditProfile, reportMarkdown as reportMarkdownProfile, normalizeProfile
 import { auditGeo, reportMarkdown as reportMarkdownGeo, geoProviderStatus, hydrateGeo, resolveGeoProvider } from './audit-geo.js'
 import { compareReports, compareMarkdown } from './compare.js'
 import { displayBand, SCORE_HINT } from './score-labels.js'
+import { sitemapHandler } from './sitemap.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -29,7 +30,7 @@ const ROOT = join(__dirname, '..')
 const PORT = Number(process.env.SCORECARD_PORT || process.env.PORT || 54445)
 const HOST = process.env.SCORECARD_HOST || process.env.HOST || '0.0.0.0'
 const DATA_DIR = process.env.SCORECARD_DATA_DIR || join(ROOT, 'data')
-const DIST_DIR = join(ROOT, 'dist')
+const DIST_DIR = process.env.SCORECARD_DIST_DIR || join(ROOT, 'dist')
 const HAS_DIST = existsSync(join(DIST_DIR, 'index.html'))
 
 // 品牌与站点地址集中在这里 —— OG 图、CTA 文案都从这两个常量取。
@@ -1130,7 +1131,7 @@ if (HAS_DIST) {
   app.use('/llms.txt', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
   // 自己的 sitemap.xml —— robots.txt 里声明了绝对 URL，抓取器会来取。
   // 同样必须在 catch-all 之前注册：SPA fallback 用 index.html 顶替 XML 是线上实证过的坑。
-  app.use('/sitemap.xml', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
+  app.get('/sitemap.xml', sitemapHandler(DIST_DIR))
   app.get('*', async (c) => {
     if (c.req.path.startsWith('/api/')) return c.notFound()
     c.header('Cache-Control', 'no-cache, must-revalidate')

@@ -6,14 +6,18 @@ import { Database } from 'bun:sqlite'
 import { SCORE_LABELS, GEO_SCORE_LABELS } from '../server/score-labels.js'
 
 const dir = mkdtempSync(join(tmpdir(), 'scorecard-cache-isolation-'))
-process.env.SCORECARD_DATA_DIR = dir
-
 let app
 let db
 let insert
 
 beforeAll(async () => {
-  ;({ app } = await import('../server/index.js?cache-isolation-test'))
+  const previous = process.env.SCORECARD_DATA_DIR
+  process.env.SCORECARD_DATA_DIR = dir
+  try { ({ app } = await import('../server/index.js?cache-isolation-test')) }
+  finally {
+    if (previous === undefined) delete process.env.SCORECARD_DATA_DIR
+    else process.env.SCORECARD_DATA_DIR = previous
+  }
   db = new Database(join(dir, 'scorecard.sqlite'))
   insert = db.query(
     'INSERT INTO audits (projectId,targetType,ts,score,band,type,stars,dims,todos,meta) VALUES (?,?,?,?,?,?,?,?,?,?)'
@@ -25,7 +29,8 @@ afterAll(() => { db.close() })
 test('同一 projectId 的不同 targetType 各自映射自己的旧标签', async () => {
   const ts = new Date().toISOString()
   insert.run('same/key', 'github', ts, 9.2, '同品类头部', 'cli', 1, '[]', '[]', '{}')
-  insert.run('same/key', 'npm', ts, 9.2, '可放心使用', 'npm', 1, '[]', '[]', '{}')
+  const newest = new Date(Date.now() + 1000).toISOString()
+  insert.run('same/key', 'npm', newest, 9.2, '可放心使用', 'npm', 1, '[]', '[]', '{}')
   insert.run('same/key', 'page', ts, 9.2, 'AI 与人类都友好', 'page', 1, '[]', '[]', '{}')
   insert.run('same/key', 'profile', ts, 9.2, '简历级个人主页', 'profile', 1, '[]', '[]', '{}')
   insert.run('same/key', 'geo', ts, 9.2, 'AI 里有存在感', 'geo', 1, '[]', '[]', '{}')
@@ -36,6 +41,8 @@ test('同一 projectId 的不同 targetType 各自映射自己的旧标签', asy
   const board = await (await app.request('/api/scorecard/leaderboard')).json()
   const row = (id) => board.items.find((x) => x.projectId === id)
   // 排行榜按最新一行取值，同一 projectId 出现多类型时只保留一条，其余类型在各自历史里
+  // 最新行来自 npm，即使同名 GitHub 有别的标签也不得套用 GitHub 映射。
+  expect(row('same/key').band).toBe(SCORE_LABELS[1])
   const nullRow = row('null/type')
   expect(nullRow.band).toBe(SCORE_LABELS[0])
   expect(nullRow.band).not.toBe('同品类头部')
@@ -65,7 +72,9 @@ test('缓存报告按请求类型映射，不被其它类型的历史覆盖', as
 
 test('数据库里的旧标签保持原样，不做数据迁移', () => {
   const rows = db.query('SELECT projectId,targetType,band FROM audits WHERE projectId = ?').all('same/key')
-  expect(rows.map((r) => r.band)).toEqual(['同品类头部', '可放心使用', 'AI 与人类都友好', '简历级个人主页', 'AI 里有存在感'])
+  expect(Object.fromEntries(rows.map((r) => [r.targetType, r.band]))).toEqual({
+    github: '同品类头部', npm: '可放心使用', page: 'AI 与人类都友好', profile: '简历级个人主页', geo: 'AI 里有存在感',
+  })
   const nullRow = db.query('SELECT band FROM audits WHERE projectId = ?').get('null/type')
   expect(nullRow.band).toBe('同品类头部')
 })

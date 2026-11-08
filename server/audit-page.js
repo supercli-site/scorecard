@@ -32,7 +32,7 @@ function normalizeDim(score, unv) {
 
 import { SCORE_HINT, SCORE_LABELS } from './score-labels.js'
 
-function bandOf(score) {
+export function bandOf(score) {
   if (score >= 9) return { label: SCORE_LABELS[0], hint: SCORE_HINT }
   if (score >= 6) return { label: SCORE_LABELS[1], hint: SCORE_HINT }
   if (score >= 3) return { label: SCORE_LABELS[2], hint: SCORE_HINT }

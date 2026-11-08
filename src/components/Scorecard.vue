@@ -10,7 +10,7 @@
  * 设计取舍：
  * - 全程免登录，前端从不接触任何 token
  * - 服务端可配一个只读 token（SCORECARD_GITHUB_TOKEN），把限额从匿名
- *   60/h/IP 提到 5000/h；不配也能跑，只是 PR/issues 维度拿不到数据、分数偏低
+ *   60/h/IP 提到 5000/h；匿名请求受限时部分数据可能无法核实，分数只反映已核实证据
  * - 报告以 Markdown 交付，不做图片导出。图片好看但是死的，看完还得自己
  *   翻译成任务；Markdown 能直接粘进 Claude Code / Cursor 让它照着改，
  *   改完再回来测一次分数。顺带少一个 html2canvas 的 CDN 依赖。

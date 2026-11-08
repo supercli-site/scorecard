@@ -1,7 +1,11 @@
 import { test, expect } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { SCORE_LABELS, GEO_SCORE_LABELS, SCORE_HINT, displayBand } from '../server/score-labels.js'
-import { auditGeo } from '../server/audit-geo.js'
+import { auditGeo, hydrateGeo, bandOf as geoBand } from '../server/audit-geo.js'
+import { bandOf as pageBand } from '../server/audit-page.js'
+import { bandOf as profileBand } from '../server/audit-profile.js'
+import { bandOf as repoBand } from '../server/audit.js'
+import { bandOf as npmBand } from '../server/audit-npm.js'
 
 const root = new URL('..', import.meta.url).pathname
 
@@ -10,6 +14,18 @@ test('分档文案只描述规则得分，不暗示排名、安全性或逐项�
     expect(label).not.toMatch(/头部|放心使用|健康|练习|谨慎|友好|查不到|存在感|白板|草稿|简历级/)
   }
   expect(SCORE_HINT).toContain('未核实项不计入评分')
+})
+
+test('五引擎保留各自阈值，边界两侧均为中性文案', () => {
+  for (const band of [repoBand, npmBand, pageBand, profileBand]) {
+    for (const [score, index] of [[0,3],[2.9,3],[3,2],[5.9,2],[6,1],[8.9,1],[9,0],[10,0]]) {
+      expect(band(score).label).toBe(SCORE_LABELS[index])
+      expect(band(score).hint).toBe(SCORE_HINT)
+    }
+  }
+  for (const [score, index] of [[0,3],[1.9,3],[2,2],[4.9,2],[5,1],[7.9,1],[8,0],[10,0]]) {
+    expect(geoBand(score)).toEqual({ label: GEO_SCORE_LABELS[index], hint: SCORE_HINT })
+  }
 })
 
 test('五引擎旧标签按 targetType 精确映射，未知标签与其它引擎原样返回', () => {
@@ -38,6 +54,15 @@ test('五引擎旧标签按 targetType 精确映射，未知标签与其它引�
   expect(displayBand('geo', '同品类头部')).toBe('同品类头部')
   expect(displayBand('github', '同品类头部项目')).toBe('同品类头部项目')
   expect(displayBand('github', null)).toBeNull()
+})
+
+test('GEO 历史读取仅映射旧标签并覆盖不实旧 hint，原始记录不变', () => {
+  const row = { band: 'AI 里查不到你', meta: JSON.stringify({ bandHint: '所有问题都没有出现' }), dims: '[]', todos: '[]' }
+  const result = hydrateGeo(row, 'example')
+  expect(result.band).toBe(GEO_SCORE_LABELS[3])
+  expect(result.bandHint).toBe(SCORE_HINT)
+  expect(row.band).toBe('AI 里查不到你')
+  expect(JSON.parse(row.meta).bandHint).toBe('所有问题都没有出现')
 })
 
 test('对外文案不做绝对保证，且两份 llms 同源', () => {

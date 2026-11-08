@@ -1,44 +1,58 @@
-import { test, expect, beforeAll, afterAll } from 'bun:test'
-import { mkdtempSync, existsSync, rmSync } from 'node:fs'
+import { test, expect, beforeAll } from 'bun:test'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Hono } from 'hono'
+import { sitemapHandler } from '../server/sitemap.js'
 
 const root = new URL('..', import.meta.url).pathname
-const dist = join(root, 'dist')
-
+const tmp = mkdtempSync(join(tmpdir(), 'scorecard-static-'))
+const dist = join(tmp, 'dist')
 let app
 
 beforeAll(async () => {
-  if (!existsSync(join(dist, 'sitemap.xml'))) {
-    throw new Error('缺少构建产物：先跑 bun run build 再跑本测试')
+  // 独立构建目录避免依赖旧 dist，也不覆盖开发者正在查看的产物。
+  const build = Bun.spawnSync(['bun', 'run', 'build', '--outDir', dist], { cwd: root, stdout: 'pipe', stderr: 'pipe' })
+  if (build.exitCode !== 0) throw new Error(`vite build failed: ${build.stderr.toString()}`)
+  const oldDist = process.env.SCORECARD_DIST_DIR
+  const oldData = process.env.SCORECARD_DATA_DIR
+  process.env.SCORECARD_DIST_DIR = dist
+  process.env.SCORECARD_DATA_DIR = join(tmp, 'data')
+  try { ({ app } = await import('../server/index.js?sitemap-static-test')) }
+  finally {
+    if (oldDist === undefined) delete process.env.SCORECARD_DIST_DIR
+    else process.env.SCORECARD_DIST_DIR = oldDist
+    if (oldData === undefined) delete process.env.SCORECARD_DATA_DIR
+    else process.env.SCORECARD_DATA_DIR = oldData
   }
-  ;({ app } = await import('../server/index.js?sitemap-test'))
 })
 
-afterAll(() => {})
-
-test('/sitemap.xml 返回真实 XML 而不是首页 HTML', async () => {
+test('/sitemap.xml 返回真实构建 XML 而不是首页 HTML', async () => {
   const res = await app.request('/sitemap.xml')
   expect(res.status).toBe(200)
-  const type = res.headers.get('Content-Type') || ''
-  expect(type).toMatch(/xml/i)
+  expect(res.headers.get('Content-Type')).toMatch(/application\/xml/i)
   const body = await res.text()
   expect(body).toContain('<loc>https://scorecard.webkubor.online/</loc>')
   expect(body).not.toContain('<!DOCTYPE html>')
-  expect(body).not.toContain('<div id="app">')
 })
 
-test('robots.txt 声明 sitemap 绝对地址', async () => {
-  const res = await app.request('/robots.txt')
-  expect(res.status).toBe(200)
-  const body = await res.text()
-  expect(body).toContain('Sitemap: https://scorecard.webkubor.online/sitemap.xml')
+test('sitemap 缺失返回 404，不能落入 SPA fallback', async () => {
+  const empty = mkdtempSync(join(tmpdir(), 'scorecard-no-sitemap-'))
+  const isolated = new Hono()
+  isolated.get('/sitemap.xml', sitemapHandler(empty))
+  isolated.get('*', (c) => c.html('<!DOCTYPE html><title>fallback</title>'))
+  const res = await isolated.request('/sitemap.xml')
+  expect(res.status).toBe(404)
+  expect(await res.text()).not.toContain('fallback')
 })
 
-test('首页 HTML 含无 JS 也可见的静态首屏与真实链接', async () => {
-  const res = await app.request('/')
-  expect(res.status).toBe(200)
-  const body = await res.text()
+test('robots 和无 JS 首页来自实际构建产物', async () => {
+  const robots = await app.request('/robots.txt')
+  expect(robots.status).toBe(200)
+  expect(await robots.text()).toContain('Sitemap: https://scorecard.webkubor.online/sitemap.xml')
+  const home = await app.request('/')
+  expect(home.status).toBe(200)
+  const body = await home.text()
   expect(body).toContain('开源项目成熟度质检')
   expect(body).toContain('https://github.com/supercli-site/scorecard')
   expect(body).toContain('/skill.md')

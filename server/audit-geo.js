@@ -28,7 +28,7 @@ const ASK_TEMPLATE = (question) =>
 import { displayBand, GEO_SCORE_LABELS, SCORE_HINT } from './score-labels.js'
 
 function clamp(n) { return Math.max(0, Math.min(10, n)) }
-function bandOf(score) {
+export function bandOf(score) {
   if (score >= 8) return { label: GEO_SCORE_LABELS[0], hint: SCORE_HINT }
   if (score >= 5) return { label: GEO_SCORE_LABELS[1], hint: SCORE_HINT }
   if (score >= 2) return { label: GEO_SCORE_LABELS[2], hint: SCORE_HINT }
