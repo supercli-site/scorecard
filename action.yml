@@ -1,0 +1,27 @@
+name: 'Scorecard PR project maturity'
+description: 'Audit the exact PR head using Scorecard’s project maturity criteria.'
+inputs:
+  github-token:
+    description: 'GitHub token with contents and pull requests read access; writing PR comments additionally requires pull-requests: write.'
+    required: true
+  comment:
+    description: 'Update one bot comment with the report. Requires pull-requests: write; defaults to false.'
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        bun-version: '1.4.0'
+    - name: Install the pinned Scorecard dependencies
+      shell: bash
+      run: bun install --frozen-lockfile --cwd "$GITHUB_ACTION_PATH"
+    - name: Audit PR head
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        SCORECARD_ACTION_REF: ${{ github.action_ref }}
+      run: bun "$GITHUB_ACTION_PATH/bin/pr-scorecard.mjs"

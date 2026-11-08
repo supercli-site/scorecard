@@ -99,6 +99,27 @@ export async function gh(path, token, { raw = false } = {}) {
   }
 }
 
+/**
+ * 读某个提交里的社区文件（LICENSE / CONTRIBUTING 等）。
+ * GitHub 的 community/profile 只描述默认分支，PR 报告必须自己按 ref 读，
+ * 否则 PR 里新增的 LICENSE 会被算成缺失。
+ */
+async function readCommunityFiles(sourcePath, token, rootEntries) {
+  const paths = [...rootEntries.filter((entry) => entry.type === 'file').map((entry) => entry.name)]
+  for (const dir of ['.github', 'docs']) {
+    if (!rootEntries.some((entry) => entry.name === dir && entry.type === 'dir')) continue
+    const result = await gh(sourcePath(`contents/${dir}`), token)
+    if (!result.ok || !Array.isArray(result.data)) throw new Error(`PR head ${dir} directory unavailable (HTTP ${result.status})`)
+    for (const entry of result.data) paths.push(`${dir}/${entry.name}`)
+  }
+  const has = (pattern) => paths.some((path) => pattern.test(path))
+  return {
+    license: has(/^(?:(?:\.github|docs)\/)?(?:license|licence|copying)(?:\.[\w.-]+)?$/i),
+    contributing: has(/^(?:(?:\.github|docs)\/)?contributing(?:\.[\w.-]+)?$/i),
+    issue_template: has(/^(?:\.github\/)?issue_template(?:\.[\w.-]+)?$/i),
+  }
+}
+
 /** 项目类型决定某些维度的及格线（skill 里每维都有「类型特有检查」） */
 function detectType(files, dirs, pkg, repo, owner) {
   const identity = `${repo.description || ''} ${(repo.topics || []).join(' ')}`.toLowerCase()
@@ -343,8 +364,11 @@ const MANIFESTS = [
   {
     file: /^composer\.json$/i,
     eco: 'Packagist',
-    pick: (t) => JSON.parse(t)?.name,
-    url: (n) => `https://repo.packagist.org/packages/${n}.json`
+    pick: (t) => {
+      const name = JSON.parse(t)?.name
+      return typeof name === 'string' && name.length <= 214 && /^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(name) ? name : null
+    },
+    url: (n) => `https://repo.packagist.org/packages/${n.split('/').map(encodeURIComponent).join('/')}.json`
   },
   {
     file: /\.gemspec$/i,
@@ -370,6 +394,8 @@ const INSTALL_HINTS = [
   { re: /\bnpx\s+[@\w][\w./@-]*/i, how: 'npx 直接运行' },
   { re: /\bdsh\s+plugin(?:\s+--profile\s+[\w-]+)?\s+add\s+[@\w][\w./@-]*/i, how: 'DSH 插件安装命令' }
 ]
+// 图形界面安装路径不是 shell 命令；只在同一行明确出现宿主、插件、搜索和安装时识别。
+const DSH_GUI_INSTALL = /(?:DeepSeek\s+Harness|\bDSH\b)[^\n]{0,100}(?:插件|plugins?)[^\n]{0,80}(?:搜索|search)[^\n]{0,120}(?:安装|install)/i
 
 // Actions 里不全是工程质量信号：自动关闭陈旧讨论、同步标签、定时提醒都可能失败，
 // 但不能因此给项目贴上「红 CI」标签。只让明确承担构建/验证/发布职责的工作流参与判分。
@@ -377,18 +403,24 @@ const ENGINEERING_WORKFLOW = /(?:^|[\s:_/.-])(?:ci|test|tests|build|lint|typeche
 
 /**
  * 跑一次完整质检。
- * @param {{owner:string, repo:string, token?:string}} opts
+ * @param {{owner:string, repo:string, token?:string, source?:{repository:string, sha:string}}} opts
+ * source pins repository-file reads to an immutable PR head; repository metadata remains live.
  */
-export async function auditProject({ owner, repo, token }) {
+export async function auditProject({ owner, repo, token, source }) {
   const full = `${owner}/${repo}`
+  if (source && (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(source.repository || '') || !/^[a-f0-9]{40}$/i.test(source.sha || ''))) {
+    throw new Error('PR source must be an owner/repository and a full 40-character commit SHA')
+  }
+  const sourceFull = source?.repository || full
+  const sourcePath = (path) => `/repos/${sourceFull}/${path}${source ? `?ref=${encodeURIComponent(source.sha)}` : ''}`
 
   // 一轮并发把要用的都拉下来。GitHub 带 token 是 5000 次/小时，
   // 20 个仓库 × 8 次 = 160 次，一天扫几十轮都不会撞限额。
   const [repoRes, community, readmeRes, contentsRes, releases, tags, runs, openIssues] = await Promise.all([
     gh(`/repos/${full}`, token),
     gh(`/repos/${full}/community/profile`, token),
-    gh(`/repos/${full}/readme`, token, { raw: true }),
-    gh(`/repos/${full}/contents`, token),
+    gh(sourcePath('readme'), token, { raw: true }),
+    gh(sourcePath('contents'), token),
     gh(`/repos/${full}/releases?per_page=5`, token),
     gh(`/repos/${full}/tags?per_page=${TAG_SAMPLE}`, token),
     gh(`/repos/${full}/actions/runs?per_page=5`, token),
@@ -407,17 +439,30 @@ export async function auditProject({ owner, repo, token }) {
     return { error: `仓库读取失败 HTTP ${s}`, errorStatus, score: null }
   }
 
+  // In a PR report an inaccessible head is not an empty project and must never receive a score.
+  if (source && (!contentsRes.ok || !Array.isArray(contentsRes.data))) {
+    const s = contentsRes.status
+    const errorStatus = s === 404 || s === 410 ? 404 : s === 403 || s === 429 ? 429 : s < 500 ? 400 : 503
+    return { error: `PR head content unavailable HTTP ${s}`, errorStatus, score: null }
+  }
+  if (source && !readmeRes.ok && readmeRes.status !== 404) {
+    throw new Error(`PR head README unavailable (HTTP ${readmeRes.status})`)
+  }
+
   const r = repoRes.data
   const readme = readmeRes.ok ? readmeRes.data : ''
   const entries = contentsRes.ok && Array.isArray(contentsRes.data) ? contentsRes.data : []
   const files = entries.map((f) => f.name)
   const dirs = entries.filter((f) => f.type === 'dir').map((f) => f.name)
   const hasFile = (re) => files.some((f) => re.test(f))
-  const cf = community.ok ? community.data?.files || {} : {}
+  // community/profile 只反映默认分支的文件状态；PR 报告必须改读该提交的内容，
+  // 否则会把「PR 里刚补上的 LICENSE」继续判成「没有 LICENSE」。
+  const cf = source ? await readCommunityFiles(sourcePath, token, entries) : (community.ok ? community.data?.files || {} : {})
   let hasIssueTemplate = !!cf.issue_template
   if (!hasIssueTemplate) {
     if (dirs.includes('.github') || files.includes('.github')) {
-      const it = await gh(`/repos/${full}/contents/.github/ISSUE_TEMPLATE`, token)
+      const it = await gh(sourcePath('contents/.github/ISSUE_TEMPLATE'), token)
+      if (source && !it.ok && it.status !== 404) throw new Error(`PR head issue template unavailable (HTTP ${it.status})`)
       if (it.ok && Array.isArray(it.data) && it.data.length > 0) hasIssueTemplate = true
     }
     if (!hasIssueTemplate) {
@@ -428,8 +473,14 @@ export async function auditProject({ owner, repo, token }) {
   // package.json 要单独取内容（contents 列表只给文件名）
   let pkg = null
   if (files.includes('package.json')) {
-    const p = await gh(`/repos/${full}/contents/package.json`, token, { raw: true })
-    if (p.ok) { try { pkg = JSON.parse(p.data) } catch { /* 坏 json 不该让整次质检失败 */ } }
+    const p = await gh(sourcePath('contents/package.json'), token, { raw: true })
+    if (source && !p.ok) throw new Error(`PR head package.json unavailable (HTTP ${p.status})`)
+    if (p.ok) {
+      try { pkg = JSON.parse(p.data) } catch (error) {
+        if (source) throw new Error('PR head package.json cannot be parsed', { cause: error })
+        /* 默认分支报告保持既有兼容行为 */
+      }
+    }
   }
   const type = detectType(files, dirs, pkg, r, owner)
 
@@ -517,14 +568,27 @@ export async function auditProject({ owner, repo, token }) {
       unv += 4
       manual.push('根目录没有认得的包清单，查不到 registry 记录 —— 这 4 分已从满分中剔除，请自行核对官网/系统包管理器渠道')
     }
-    if (m) {
+    if (m && source) {
+      unv += 4
+      manual.push('PR 评分不向第三方 registry 发送提交中的包名；发布状态需另行核验，这 4 分未计入')
+    }
+    if (m && !source) {
       const fname = files.find((f) => m.file.test(f))
       let name = null
       try {
         // package.json 已经取过内容，别再打一次
-        const text = m.eco === 'npm' && pkg ? JSON.stringify(pkg) : (await gh(`/repos/${full}/contents/${fname}`, token, { raw: true })).data
+        let text
+        if (m.eco === 'npm' && pkg) text = JSON.stringify(pkg)
+        else {
+          const manifest = await gh(sourcePath(`contents/${encodeURIComponent(fname)}`), token, { raw: true })
+          if (source && !manifest.ok) throw new Error(`PR head manifest unavailable (HTTP ${manifest.status})`)
+          text = manifest.data
+        }
         if (text) name = m.pick(text)
-      } catch { /* 清单文件格式坏不该让整次质检失败 */ }
+      } catch (error) {
+        if (source) throw new Error('PR head manifest cannot be read or parsed', { cause: error })
+        /* 清单文件格式坏不该让整次质检失败 */
+      }
 
       if (m.eco === 'npm' && pkg?.private) {
         ev.push('package.json 标了 private，不走 registry')
@@ -558,8 +622,12 @@ export async function auditProject({ owner, repo, token }) {
       if (hits.length) {
         ev.push(`README 给了安装方式：${hits.slice(0, 3).map((h) => h.how).join('、')}`)
         score += 3
+      } else if (DSH_GUI_INSTALL.test(readme)) {
+        ev.push('README 给出 DSH 插件界面搜索和安装路径')
+        manual.push('核实图形界面中的搜索、安装和宿主版本是否与说明一致')
+        score += 3
       } else {
-        gaps.push('README 里找不到一条可以照抄的安装命令')
+        gaps.push('README 里找不到一条可以照抄的安装命令或已识别的界面安装路径')
       }
     }
 
@@ -716,7 +784,7 @@ export async function auditProject({ owner, repo, token }) {
   {
     const ev = [], gaps = []
     let score = 1
-    cf.license ? (score += 3, ev.push(`LICENSE: ${r.license?.spdx_id || '有'}`)) : gaps.push('没有 LICENSE —— 公司用户直接过滤掉')
+    cf.license ? (score += 3, ev.push(source ? 'LICENSE: 提交中存在许可证文件（类型需核实）' : `LICENSE: ${r.license?.spdx_id || '有'}`)) : gaps.push('没有 LICENSE —— 公司用户直接过滤掉')
     cf.contributing ? (score += 1.5, ev.push('有 CONTRIBUTING')) : gaps.push('没有 CONTRIBUTING')
     hasIssueTemplate ? (score += 1, ev.push('有 issue 模板')) : gaps.push('没有 issue 模板')
 
@@ -756,8 +824,16 @@ export async function auditProject({ owner, repo, token }) {
       if (readme.length > 800) { ev.push(`README ${readme.length} 字符`); score += 2 }
       else gaps.push(`README 只有 ${readme.length} 字符，撑不起「这是什么、怎么装、怎么用」`)
       sec('install|安装|部署|上手') ? (score += 2, ev.push('有安装章节')) : gaps.push('README 没有安装章节')
-      sec('usage|quick\\s*start|getting\\s*started|快速(?:开始|上手|安装)|使用|用法|怎么用') ? (score += 2, ev.push('有快速开始/使用章节')) : gaps.push('README 没有快速开始')
-      sec('api|配置|config|options|参数|选项|自定义') ? (score += 1.5, ev.push('有 API/配置章节')) : gaps.push('没有 API/配置参考')
+      if (sec('usage|quick\\s*start|getting\\s*started|快速(?:开始|上手|安装)|使用|用法|怎么用')) {
+        score += 2; ev.push('有快速开始/使用章节')
+      } else if (DSH_GUI_INSTALL.test(readme) && /(?:重启|restart)[^\n]{0,80}(?:点|点击|打开|click|open)/i.test(readme)) {
+        unv += 2; manual.push('安装说明中包含后续操作，需人工核实能否完成首次使用 —— 这 2 分未计入')
+      } else gaps.push('README 没有快速开始')
+      if (sec('api|配置|config|options|参数|选项|自定义')) {
+        score += 1.5; ev.push('有 API/配置章节')
+      } else if (type === 'theme') {
+        unv += 1.5; manual.push('主题的图形配置与使用说明需人工核实 —— API/配置章节这 1.5 分未计入')
+      } else gaps.push('没有 API/配置参考')
       sec('faq|troubleshoot|常见问题|故障|排查|问题') ? (score += 1, ev.push('有 FAQ/故障排查')) : gaps.push('没有 FAQ/故障排查')
     }
     // AGENTS.md / llms.txt 归入 ⑨ AI 可读性单独打分，这里只留 SKILL.md，
@@ -862,7 +938,11 @@ export async function auditProject({ owner, repo, token }) {
         }
       } catch { /* 非 URL 的 homepage */ }
     }
-    if (!origin) {
+    if (source && origin) {
+      origin = null
+      unv += 3.5
+      manual.push('PR 评分不访问任意官网地址；robots.txt / llms.txt 需另行核验，这 3.5 分未计入')
+    } else if (!origin) {
       unv += 3.5
       manual.push(isHostingPlatform
         ? 'homepage 指向代码托管平台自身（非独立官网）—— robots.txt / llms.txt 判不了，这 3.5 分已从满分中剔除'
@@ -871,7 +951,7 @@ export async function auditProject({ owner, repo, token }) {
 
     // 三个独立请求并发：GitHub 的 copilot 指令 + 官网的 robots.txt / llms.txt
     const [cop, robots, llms] = await Promise.allSettled([
-      gh(`/repos/${full}/contents/.github/copilot-instructions.md`, token, { raw: true }),
+      gh(sourcePath('contents/.github/copilot-instructions.md'), token, { raw: true }),
       origin ? fetch(`${origin}/robots.txt`, {
         headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.webkubor.online)' },
         signal: AbortSignal.timeout(8000)
@@ -882,6 +962,9 @@ export async function auditProject({ owner, repo, token }) {
       }) : Promise.resolve(null),
     ])
 
+    if (source && (cop.status === 'rejected' || (!cop.value?.ok && cop.value?.status !== 404))) {
+      throw new Error('PR head Copilot instructions could not be checked')
+    }
     if (cop.status === 'fulfilled' && cop.value?.ok) {
       score += 1.5
       ev.push('有 Copilot 定制指令（.github/copilot-instructions.md）')
@@ -971,6 +1054,7 @@ export async function auditProject({ owner, repo, token }) {
   return {
     project: full, type, score, band: bandOf(score).label,
     stars: r.stargazers_count, dims: applicableDims, todos,
+    ...(source ? { source: { repository: sourceFull, sha: source.sha, files: 'commit', metadata: 'live base repository' } } : {}),
     // 让前端和报告都能说清「这次有几维没量到」，而不是让人以为九维都算了
     scoredCount: scored.length,
     inconclusiveDims: inconclusive,
@@ -996,6 +1080,14 @@ export function reportMarkdown(a, { site = '' } = {}) {
   L.push(`**${a.score} / 10** — ${a.band}`)
   L.push('')
   L.push(`项目类型 \`${a.type}\` · ${a.stars} star · 生成于 ${dayjs(a.ts).format('YYYY-MM-DD HH:mm')}`)
+  if (a.source) {
+    L.push('')
+    L.push(`> **证据范围**：仓库文件类判据读自提交 \`${a.source.sha}\`（${a.source.repository}）；仓库元数据（star、issue、release、CI）为该仓库当前状态。`)
+  }
+  if (a.pr) {
+    L.push('')
+    L.push(`> **对应 PR**：#${a.pr.number} · head \`${a.pr.headSha}\`${a.pr.baseSha ? ` · base \`${a.pr.baseSha}\`` : ''}`)
+  }
   // 说清这个分数是几维算出来的。有维度没量到却不讲，读的人会以为九维都核实过了。
   if (a.scoredCount != null && a.scoredCount < 9) {
     L.push('')
