@@ -303,6 +303,12 @@ GEO 的 CLI 与网页同一套判据。两条它特有的约定：**没法用 `-
 
 CLI 把对应 HTTP 端点暴露成 stdout，agent 默认动作就能跑。
 
+## 在 PR 里做项目质检
+
+[Scorecard PR Action](docs/pr-action.md) 可以在公开仓库的 GitHub PR 里输出九维成熟度报告。文件证据固定到 PR 当前提交，仓库级数据标明为实时状态；默认只展示报告，不因分数阻断合并。它不执行 PR 代码，也不把 PR 内容发送到 Scorecard 网站。
+
+[查看可直接使用的工作流、权限和边界 →](docs/pr-action.md)
+
 ## GitHub 维度的 skill 互补
 
 GitHub 仓这一路额外配 Claude skill 版（深度诊断），互补不重复：

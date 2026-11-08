@@ -1,0 +1,27 @@
+name: 'Scorecard PR project maturity'
+description: 'Audit the exact PR head using Scorecard’s project maturity criteria.'
+inputs:
+  github-token:
+    description: 'GitHub token with contents and pull requests read access; writing PR comments additionally requires pull-requests: write.'
+    required: true
+  comment:
+    description: 'Update one bot comment with the report. Requires pull-requests: write; defaults to false.'
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Install the locked scoring runtime
+      shell: bash
+      run: |
+        node -e "if (+process.versions.node.split('.')[0] < 20) throw new Error('Node.js 20 or newer is required')"
+        npm ci --prefix "$GITHUB_ACTION_PATH/action-runtime" --ignore-scripts --no-audit --no-fund
+        test ! -e "$GITHUB_ACTION_PATH/node_modules" && test ! -L "$GITHUB_ACTION_PATH/node_modules"
+        ln -s "$GITHUB_ACTION_PATH/action-runtime/node_modules" "$GITHUB_ACTION_PATH/node_modules"
+    - name: Audit PR head
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        SCORECARD_ACTION_REF: ${{ github.action_ref }}
+      run: node "$GITHUB_ACTION_PATH/bin/pr-scorecard.mjs"

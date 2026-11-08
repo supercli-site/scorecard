@@ -2,7 +2,7 @@ name: check
 
 # 这个项目的门禁分三层，全部在这里跑：
 #   1. 维度一致性 —— GitHub 引擎与 skill 必须说同一套话
-#   2. 四路引擎的维度层纪律 —— 每条结论要有证据、查不到要走 unverifiable 而不是扣分
+#   2. 四路引擎维度层纪律 —— 每条结论要有证据、查不到要走 unverifiable 而不是扣分
 #   3. 单元测试
 #
 # 为什么 CI 必须有：本项目自己的「发布工程」维度明确判「有没有 CI 运行记录」。
@@ -20,9 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun from npm
+        run: |
+          npm install --prefix "$RUNNER_TEMP/scorecard-bun" --no-save --no-audit --no-fund bun@1.4.4
+          echo "$RUNNER_TEMP/scorecard-bun/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: 安装依赖
         run: bun install --frozen-lockfile
