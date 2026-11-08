@@ -149,6 +149,14 @@ test('README 中 API 参考链接计为文档证据但保留访问人工核验',
   } finally { f.restore() }
 })
 
+test('普通 rapid 指南链接不会被误认作 API 文档', async () => {
+  const f = fixture({ readme: '## Quick start\n[Rapid guide](https://example.com/guide)' })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    expect(report.dims.find(d => d.key === 'docs').evidence.join(' ')).not.toContain('链接到 API/配置参考')
+  } finally { f.restore() }
+})
+
 test('没有包名的安装命令不会被识别为完整安装路径', async () => {
   const f = fixture({ readme: '## 一分钟接入\n\n```sh\npnpm add -D\n```' })
   try {

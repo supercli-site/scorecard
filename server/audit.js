@@ -852,7 +852,7 @@ export async function auditProject({ owner, repo, token, source }) {
       } else gaps.push('README 没有快速开始')
       if (sec('api|配置|config|options|参数|选项|自定义')) {
         score += 1.5; ev.push('有 API/配置章节')
-      } else if (/\[[^\]\n]*(?:api|配置参考|configuration reference)[^\]\n]*\]\((?:https?:\/\/|\.{1,2}\/|\/)[^)\s]+\)/i.test(readme)) {
+      } else if (/\[[^\]\n]*(?:\bapi\b|配置参考|configuration reference)[^\]\n]*\]\((?:https?:\/\/|\.{1,2}\/|\/)[^)\s]+\)/i.test(readme)) {
         score += 1.5; ev.push('README 链接到 API/配置参考')
         manual.push('核实 API/配置参考链接可访问且内容与版本一致')
       } else if (type === 'theme') {
