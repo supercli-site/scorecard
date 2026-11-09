@@ -25,6 +25,44 @@
   --shadow: 0 8px 24px rgba(1, 4, 9, 0.6);
   --radius: 10px;
   --radius-sm: 6px;
+
+  /* ===== 首页改版引入的蓝灰阶梯（2026-11-09）=====
+     改版把首页从「一堆说明卡」改成「先输入、再探索」，为此重新调了一组
+     围绕 --accent 的蓝灰色阶。原先这些值直接硬编码在 Scorecard.vue 里，
+     约 22 个色值散落各处 —— 主题一改就会重演 bandColor() 那次漂移。
+
+     这里的命名按**角色**而不是颜色值：同色系里差几档的蓝灰各有各的用途，
+     按色值命名（--blue-1/--blue-2）会把语义丢掉，换主题时也无从下手。
+
+     对比度实测（WCAG 2.1）：
+       文字类 全部过 AA 4.5 —— eyebrow 10.90:1 / h1 grad 9.83:1 / sub 9.93:1
+       sub-diff 7.88:1 / mode-tab 9.68:1 / geo 9.79:1 / geo em 7.83:1
+       hint·trust·dim-q 8.29:1 / tab.active 文字 9.20:1
+       边框类 低于非文字 3:1，但**优于改版前基线**（新 2.06:1 vs 旧 1.55:1），
+       属于「卡片描边」而非「信息载体」，不构成回归。
+     */
+  /* 文字：首页各层级 */
+  --home-eyebrow-text: #a8c8e8;
+  --home-title-grad: #86bfff;
+  --home-lead-text: #b1bdcc;
+  --home-note-text: #99a9bb;
+  --home-tab-text: #adbbca;
+  --home-card-text: #b7cbe2;
+  --home-card-sub-text: #a4b6ca;
+  --home-muted-text: #a6b6c9; /* 场景卡提示 / 信任行 / 维度卡问句 —— 三处同色 */
+  --home-on-bright-text: #10243a; /* 亮蓝底上的文字，必须深色 */
+  /* 底色：卡片 */
+  --home-input-bg: #141e2b;
+  --home-card-bg: #132133;
+  --home-tile-bg: #131c28;
+  --home-tile-active-bg: #182b41;
+  --home-tab-active-bg: #9bcaff;
+  /* 描边 */
+  --home-eyebrow-border: #38516d;
+  --home-input-border: #38495f;
+  --home-card-border: #29435f;
+  --home-tile-border: #29394a;
+  --home-tile-active-border: #6aa9ed;
 }
 
 * {

@@ -770,7 +770,7 @@ onMounted(() => {
             class="sc-input"
             type="text"
             aria-label="输入 GitHub 仓库、npm 包、网址或 GitHub 用户名"
-            placeholder="输入 GitHub 仓库、npm 包或网址"
+            placeholder="github.com/owner/repo  ·  @user 测 GitHub 首页"
             spellcheck="false"
             autocomplete="off"
             @keydown.enter.prevent="generate"
@@ -2571,37 +2571,39 @@ onMounted(() => {
     display: none;
   }
 }
-/* 首页视觉层级：先完成输入，再探索其他能力。 */
+/* 首页视觉层级：先完成输入，再探索其他能力。
+   色值一律走 global.css 的 --home-* token —— 这组蓝灰阶梯原先硬编码在
+   这里，主题一改就会重演 bandColor() 那次漂移。 */
 .sc-wrap { max-width: 1120px; padding: 64px 32px 80px; }
 .sc-hero { max-width: 100%; }
-.sc-eyebrow { color: #a8c8e8; background: transparent; border-color: #38516d; padding: 6px 11px; letter-spacing: .14em; }
+.sc-eyebrow { color: var(--home-eyebrow-text); background: transparent; border-color: var(--home-eyebrow-border); padding: 6px 11px; letter-spacing: .14em; }
 .sc-h1 { font-size: clamp(42px, 5.2vw, 68px); line-height: 1.12; letter-spacing: -.045em; margin: 25px 0 22px; }
-.sc-h1 .grad { background: none; color: #86bfff; }
-.sc-sub { max-width: 720px; font-size: 16px; line-height: 1.85; color: #b1bdcc; margin-bottom: 24px; }
-.sc-sub-diff { font-size: 13px; color: #99a9bb; margin: 0 0 40px; }
+.sc-h1 .grad { background: none; color: var(--home-title-grad); }
+.sc-sub { max-width: 720px; font-size: 16px; line-height: 1.85; color: var(--home-lead-text); margin-bottom: 24px; }
+.sc-sub-diff { font-size: 13px; color: var(--home-note-text); margin: 0 0 40px; }
 .sc-mode-tabs { margin-bottom: 12px; gap: 8px; }
-.sc-mode-tab { border-radius: 8px; color: #adbbca; padding: 9px 16px; font-weight: 600; }
-.sc-mode-tab.active { color: #10243a; background: #9bcaff; border-color: #9bcaff; }
+.sc-mode-tab { border-radius: 8px; color: var(--home-tab-text); padding: 9px 16px; font-weight: 600; }
+.sc-mode-tab.active { color: var(--home-on-bright-text); background: var(--home-tab-active-bg); border-color: var(--home-tab-active-bg); }
 .sc-form { margin-bottom: 14px; }
-.sc-input-wrap { border-radius: 12px; min-height: 72px; background: #141e2b; border-color: #38495f; padding: 8px 9px 8px 20px; }
+.sc-input-wrap { border-radius: 12px; min-height: 72px; background: var(--home-input-bg); border-color: var(--home-input-border); padding: 8px 9px 8px 20px; }
 .sc-input { font-size: 15px; }
 .sc-go { min-height: 48px; min-width: 118px; border-radius: 8px; }
 .sc-chips { margin-bottom: 32px; }
-.sc-geo-entry { color: #b7cbe2; border-radius: 12px; padding: 20px; margin: 8px 0 16px; background: #132133; border-color: #29435f; }
+.sc-geo-entry { color: var(--home-card-text); border-radius: 12px; padding: 20px; margin: 8px 0 16px; background: var(--home-card-bg); border-color: var(--home-card-border); }
 .sc-geo-entry-main strong { font-size: 15px; font-weight: 650; }
-.sc-geo-entry-main em { font-size: 13px; color: #a4b6ca; }
+.sc-geo-entry-main em { font-size: 13px; color: var(--home-card-sub-text); }
 .sc-scenarios { gap: 12px; margin-bottom: 28px; }
-.sc-scenario { min-height: 104px; border-radius: 12px; padding: 18px; background: #131c28; border: 1px solid #29394a; }
-.sc-scenario.active { border-color: #6aa9ed; background: #182b41; }
+.sc-scenario { min-height: 104px; border-radius: 12px; padding: 18px; background: var(--home-tile-bg); border: 1px solid var(--home-tile-border); }
+.sc-scenario.active { border-color: var(--home-tile-active-border); background: var(--home-tile-active-bg); }
 .sc-scenario-label { font-size: 15px; }
-.sc-scenario-hint, .sc-scenario.active .sc-scenario-hint { font-size: 13px; line-height: 1.6; color: #a6b6c9; }
-.sc-trust { color: #a6b6c9; }
+.sc-scenario-hint, .sc-scenario.active .sc-scenario-hint { font-size: 13px; line-height: 1.6; color: var(--home-muted-text); }
+.sc-trust { color: var(--home-muted-text); }
 .sc-dims-guide, .sc-board { margin-top: 56px; }
 .sc-board-title { font-size: 20px; }
 .sc-dims-grid { gap: 12px; }
 .sc-dim-card { border-radius: 12px; padding: 18px; }
 .sc-dim-card-name { font-size: 14px; }
-.sc-dim-card-q { color: #a6b6c9; font-size: 13px; line-height: 1.6; }
+.sc-dim-card-q { color: var(--home-muted-text); font-size: 13px; line-height: 1.6; }
 @media (max-width: 700px) {
   .sc-wrap { padding: 42px 20px 64px; }
   .sc-h1 { font-size: 40px; }
