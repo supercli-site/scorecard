@@ -32,7 +32,7 @@ test('/sitemap.xml 返回真实构建 XML 而不是首页 HTML', async () => {
   expect(res.status).toBe(200)
   expect(res.headers.get('Content-Type')).toMatch(/application\/xml/i)
   const body = await res.text()
-  expect(body).toContain('<loc>https://scorecard.webkubor.online/</loc>')
+  expect(body).toContain('<loc>https://scorecard.supercli.site/</loc>')
   expect(body).not.toContain('<!DOCTYPE html>')
 })
 
@@ -49,7 +49,7 @@ test('sitemap 缺失返回 404，不能落入 SPA fallback', async () => {
 test('robots 和无 JS 首页来自实际构建产物', async () => {
   const robots = await app.request('/robots.txt')
   expect(robots.status).toBe(200)
-  expect(await robots.text()).toContain('Sitemap: https://scorecard.webkubor.online/sitemap.xml')
+  expect(await robots.text()).toContain('Sitemap: https://scorecard.supercli.site/sitemap.xml')
   const home = await app.request('/')
   expect(home.status).toBe(200)
   const body = await home.text()

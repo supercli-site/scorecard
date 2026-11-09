@@ -4,17 +4,17 @@
 
 [![license](https://img.shields.io/github/license/supercli-site/scorecard.svg)](./LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/stargazers)
-[![online status](https://img.shields.io/website-up-down-green-red/https/scorecard.webkubor.online.svg)](https://scorecard.webkubor.online)
+[![online status](https://img.shields.io/website-up-down-green-red/https/scorecard.supercli.site.svg)](https://scorecard.supercli.site)
 [![issues](https://img.shields.io/github/issues/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/issues)
 
 > Paste a **GitHub URL / npm package name / webpage URL / @GitHub username**, get a per-target-type quality report in seconds: radar chart, an action list sorted by `impact ÷ cost`, and a Markdown report you can hand straight to an AI. **Compare two targets** (test env ↔ prod env, you ↔ a competitor) to see exactly where they diverge. No login, public repos no token needed.
 
-**Live**: <https://scorecard.webkubor.online>
+**Live**: <https://scorecard.supercli.site>
 
 [中文](./README.md)
 
 <p align="center">
-  <img src="https://scorecard.webkubor.online/og/scorecard/webkubor/typora-Bloom-theme"
+  <img src="https://scorecard.supercli.site/og/scorecard/webkubor/typora-Bloom-theme"
        alt="Scorecard report example" width="640">
 </p>
 
@@ -39,7 +39,7 @@ Run two targets side-by-side, get a dimension diff + unique-gap lists — the ma
 
 - 9 dim-by-dim Δ, A-only and B-only gaps split out
 - The report includes a built-in "bring A up to B" prompt for the AI
-- Share URL: `https://scorecard.webkubor.online/?share=<A>&compare=<B>&type=page` — paste straight into IM
+- Share URL: `https://scorecard.supercli.site/?share=<A>&compare=<B>&type=page` — paste straight into IM
 
 ## Quick start
 
@@ -143,7 +143,7 @@ Front it with a Cloudflare Tunnel pointing at `127.0.0.1:54445` — no public po
 | `SCORECARD_GITHUB_TOKEN` | – | Read-only token; raises API limit, unlocks PR/Issues dimensions |
 | `SCORECARD_DATA_DIR` | ./data | sqlite data dir |
 | `SCORECARD_BRAND` | SCORECARD | Brand text on OG image |
-| `SCORECARD_SITE_URL` | scorecard.webkubor.online | Site URL on OG image CTA |
+| `SCORECARD_SITE_URL` | scorecard.supercli.site | Site URL on OG image CTA |
 
 ## API
 

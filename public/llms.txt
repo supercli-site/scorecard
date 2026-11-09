@@ -12,7 +12,7 @@
 
 ## 怎么开始
 
-最省事的用法是网页版，免登录：打开 <https://scorecard.webkubor.online/>，粘一个
+最省事的用法是网页版，免登录：打开 <https://scorecard.supercli.site/>，粘一个
 GitHub 仓库（`owner/name`）、npm 包名、网页 URL 或 GitHub 用户名，几秒后拿到
 九维雷达图、按「影响÷成本」排序的整改清单，以及可直接喂给 AI 的 Markdown 报告。
 
@@ -62,14 +62,14 @@ GitHub 仓库（`owner/name`）、npm 包名、网页 URL 或 GitHub 用户名�
 
 ## API（免登录，公开仓库无需 token）
 
-- GET https://scorecard.webkubor.online/api/scorecard?repo=owner/name —— GitHub 仓库九维
-- GET https://scorecard.webkubor.online/api/scorecard?type=npm&pkg=react —— npm 包七维
-- GET https://scorecard.webkubor.online/api/scorecard?type=page&url=https://... —— 网页九维
-- GET https://scorecard.webkubor.online/api/scorecard?type=profile&user=webkubor —— GitHub 个人首页七维（身份门面 / 首页自述 / 可视化 / 活跃度 / 作品集 / 影响力 / 链接触达）
-- GET https://scorecard.webkubor.online/api/scorecard/report.md?repo=owner/name —— 同一份报告的 Markdown 版
-- GET https://scorecard.webkubor.online/api/scorecard/compare?type=page&a=<urlA>&b=<urlB> —— 两路对比 + 维度差分
-- GET https://scorecard.webkubor.online/api/scorecard/history?target=owner/name —— 同一项目的历次评估与维度变化
-- GET https://scorecard.webkubor.online/api/scorecard/leaderboard —— 已质检项目的排行
+- GET https://scorecard.supercli.site/api/scorecard?repo=owner/name —— GitHub 仓库九维
+- GET https://scorecard.supercli.site/api/scorecard?type=npm&pkg=react —— npm 包七维
+- GET https://scorecard.supercli.site/api/scorecard?type=page&url=https://... —— 网页九维
+- GET https://scorecard.supercli.site/api/scorecard?type=profile&user=webkubor —— GitHub 个人首页七维（身份门面 / 首页自述 / 可视化 / 活跃度 / 作品集 / 影响力 / 链接触达）
+- GET https://scorecard.supercli.site/api/scorecard/report.md?repo=owner/name —— 同一份报告的 Markdown 版
+- GET https://scorecard.supercli.site/api/scorecard/compare?type=page&a=<urlA>&b=<urlB> —— 两路对比 + 维度差分
+- GET https://scorecard.supercli.site/api/scorecard/history?target=owner/name —— 同一项目的历次评估与维度变化
+- GET https://scorecard.supercli.site/api/scorecard/leaderboard —— 已质检项目的排行
 - 任意端点加 `fresh=1` 跳过 30 分钟缓存
 
 `score` 为 `null` 表示该维度「无法核实」，不是 0 分。
@@ -85,7 +85,7 @@ https://github.com/supercli-site/scorecard/blob/main/docs/pr-action.md
 ## Optional
 
 - Agent skill（装给 coding agent 用，与网页端判据同源）：
-  https://scorecard.webkubor.online/skill.md
+  https://scorecard.supercli.site/skill.md
 - PR 质检工作流说明：https://github.com/supercli-site/scorecard/blob/main/docs/pr-action.md
 - 项目说明：https://github.com/supercli-site/scorecard/blob/main/README.md
 - 判据与成熟度标准：https://github.com/supercli-site/scorecard/tree/main/skills/project-maturity-audit

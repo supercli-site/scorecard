@@ -35,7 +35,7 @@ import { gh } from './audit.js'
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
-const UA = 'scorecard-audit (+https://scorecard.webkubor.online)'
+const UA = 'scorecard-audit (+https://scorecard.supercli.site)'
 const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
 const clamp = (n) => Math.max(0, Math.min(10, Math.round(n * 10) / 10))

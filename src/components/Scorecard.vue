@@ -29,7 +29,7 @@ const props = defineProps({
 const BRAND = 'Scorecard'
 const BRAND_MARK = 'SCORECARD' // 视觉标记用大写
 const BRAND_SLUG = 'scorecard' // 导出文件名用
-const SITE_HOST = 'scorecard.webkubor.online'
+const SITE_HOST = 'scorecard.supercli.site'
 
 // ---------- 场景（用户带着什么问题来的） ----------
 //

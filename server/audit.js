@@ -617,7 +617,7 @@ export async function auditProject({ owner, repo, token, source }) {
       } else if (name) {
         // crates.io / Packagist 不带 UA 会拒；加超时并在 npm 官方源超时时回退公共镜像验证，防止网络偶发抖动误判「没发布」
         let res = await fetch(m.url(name), {
-          headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.webkubor.online)' },
+          headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.supercli.site)' },
           signal: AbortSignal.timeout(5000)
         }).catch(() => null)
         if (!res?.ok && m.eco === 'npm') {
@@ -977,11 +977,11 @@ export async function auditProject({ owner, repo, token, source }) {
     const [cop, robots, llms] = await Promise.allSettled([
       gh(sourcePath('contents/.github/copilot-instructions.md'), token, { raw: true }),
       origin ? fetch(`${origin}/robots.txt`, {
-        headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.webkubor.online)' },
+        headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.supercli.site)' },
         signal: AbortSignal.timeout(8000)
       }) : Promise.resolve(null),
       origin ? fetch(`${origin}/llms.txt`, {
-        headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.webkubor.online)' },
+        headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.supercli.site)' },
         signal: AbortSignal.timeout(8000)
       }) : Promise.resolve(null),
     ])

@@ -4,7 +4,7 @@
 
 [![license](https://img.shields.io/github/license/supercli-site/scorecard.svg)](./LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/stargazers)
-[![online status](https://img.shields.io/website-up-down-green-red/https/scorecard.webkubor.online.svg)](https://scorecard.webkubor.online)
+[![online status](https://img.shields.io/website-up-down-green-red/https/scorecard.supercli.site.svg)](https://scorecard.supercli.site)
 [![issues](https://img.shields.io/github/issues/supercli-site/scorecard.svg)](https://github.com/supercli-site/scorecard/issues)
 
 > **做决定之前，先跑一次体检。**
@@ -27,16 +27,16 @@ OpenSSF 那个管**供应链安全** —— 依赖有没有钉版本、token 权
 
 | 我要做的事 | 入口 | 它会告诉我 |
 |---|---|---|
-| 刚开源，不知道差在哪 | <https://scorecard.webkubor.online> | 别人第一眼会看到什么、文档够不够用 |
+| 刚开源，不知道差在哪 | <https://scorecard.supercli.site> | 别人第一眼会看到什么、文档够不够用 |
 | 要发版，想补齐门面 | 同上 | tag / Release / CHANGELOG / CI 少了哪套仪式 |
 | 把 GitHub 首页当简历经营 | 同上，输 `@用户名` | 首页缺哪块：README 简历感、可视化组件、活跃轨迹 |
-| 交给 coding agent 改 | [`/skill.md`](https://scorecard.webkubor.online/skill.md) | 让 agent 按同一套判据先看清现状 |
+| 交给 coding agent 改 | [`/skill.md`](https://scorecard.supercli.site/skill.md) | 让 agent 按同一套判据先看清现状 |
 | 一堆仓库，先修哪个 | `/api/scorecard/compare` | 逐维度差分，哪边领先、差在哪 |
 
-**线上版**：<https://scorecard.webkubor.online>
+**线上版**：<https://scorecard.supercli.site>
 
 <p align="center">
-  <img src="https://scorecard.webkubor.online/og/scorecard/webkubor/typora-Bloom-theme"
+  <img src="https://scorecard.supercli.site/og/scorecard/webkubor/typora-Bloom-theme"
        alt="Scorecard 报告示例" width="640">
 </p>
 
@@ -146,7 +146,7 @@ Scorecard 的做法：读不到的判据从分母里剔除，该维度标 `score
 ## GEO —— 测品牌在 AI 答案里的可见度
 
 前面几套测的是「你自己的东西做得好不好」，GEO 测的是**别人问 AI 时你会不会被提到**。
-入口：<https://scorecard.webkubor.online/#/geo>，或落地页顶部那张卡片。
+入口：<https://scorecard.supercli.site/#/geo>，或落地页顶部那张卡片。
 
 要四个输入：品牌名、自有域名、**用户会问的问题清单**、竞品。四维：
 
@@ -239,7 +239,7 @@ scorecard geo --brand 山鬼映画 --provider magpie
 
 - 9 维逐条 Δ，A 独有 / B 独有 gap 分开列
 - 报告里自带 "把 A 补到 B 的水准" 的 AI prompt
-- 分享 URL：`https://scorecard.webkubor.online/?share=<A>&compare=<B>&type=page` —— 直接扔 IM 即可
+- 分享 URL：`https://scorecard.supercli.site/?share=<A>&compare=<B>&type=page` —— 直接扔 IM 即可
 
 ## 快速开始
 
@@ -281,7 +281,7 @@ token 只在服务端使用，从不下发给前端。
 node bin/scorecard.mjs supercli-site/scorecard --json
 ```
 
-CLI 默认访问线上免费实例 `https://scorecard.webkubor.online`；要使用自托管服务，在命令后加 `--api http://127.0.0.1:54445`。在仓库目录内运行下面的命令：
+CLI 默认访问线上免费实例 `https://scorecard.supercli.site`；要使用自托管服务，在命令后加 `--api http://127.0.0.1:54445`。在仓库目录内运行下面的命令：
 
 ```bash
 # 三路审计（type 推断：URL=page，pkg 名=npm，owner/repo=github）
@@ -372,7 +372,7 @@ Restart=always
 | `SCORECARD_GEO_MAGPIE_MAX_TOKENS` | 4000 | 单次回答上限。调到 2000 会让默认模型被截断，来源列表清零 |
 | `SCORECARD_DATA_DIR` | ./data | sqlite 存放目录 |
 | `SCORECARD_BRAND` | SCORECARD | OG 图上的品牌字样 |
-| `SCORECARD_SITE_URL` | scorecard.webkubor.online | OG 图 CTA 里的站点地址 |
+| `SCORECARD_SITE_URL` | scorecard.supercli.site | OG 图 CTA 里的站点地址 |
 
 ## API
 
