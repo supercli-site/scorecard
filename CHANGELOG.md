@@ -2,6 +2,34 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## 2.6.0 — 2026-11-09
+
+### 新增
+
+- `feat(ui)` — **首页改版：先输入，再探索**。查询框提到首屏第一位，标题放大、正文放宽，场景卡与 GEO 入口下移到查询之后（#10）
+- `feat(action)` — **PR 成熟度 Action**：在公开仓库的 PR 上按 GitHub 九维生成可复核报告，绑定 PR 的 head / base SHA，证据不全时拒绝发布而不是乱给分（#3，用法见 `docs/pr-action.md`）
+- `feat(playbook)` — **发布打法页**（`#/playbook`）：顶栏入口 + 报告内引导卡，分发维度新增发布物料判据（#9）
+
+### 优化
+
+- `fix(ui)` — 首页去掉空白浪费：九维说明卡固定 3×3（原来宽屏排成 5 列，第二行空一格），容器收到 1000px，手机端单列（#11）
+- `fix(ui)` — 输入框恢复 `@user 测 GitHub 首页` 提示，并补 `aria-label`，屏幕阅读器能读出输入框用途（#10、#11）
+- `refactor(ui)` — 全站颜色收口到 `global.css` 变量，`bandColor()` 不再在 JS 里写死分数色；改动前后首页 / 报告页 / 对比页 863 个元素颜色逐项一致（#11、#12）
+- `feat(site)` — 站点迁到 **scorecard.supercli.site**，旧域名 scorecard.webkubor.online 暂时并存待下线（#8）
+- `fix(site)` — 补 `/.well-known/security.txt`、`humans.txt` 与安全响应头（CSP、HSTS、X-Frame-Options 等），sitemap 改为静态可读
+
+### 修复
+
+- `fix(audit)` — 安装与 API 文档识别更准：跨行、标题行、卸载章节、无包名命令不再被误判为安装说明；无关指南链接不再被当成 API 文档（#6）
+- `fix(audit)` — 未知的 GitHub 分享分数保持「未评分」，不再显示成 0（#5）
+- `fix(audit)` — 公开产品类型优先于附带的 `SKILL.md`，工作流只按默认分支评估，跳过 / 取消不再算作失败
+- `fix(geo)` — GEO 判据只依据可观察证据，CLI `--help` 正常返回成功（#7）
+
+### 兼容与升级
+
+- 评分口径、API 路径与报告格式不变；仓库已转移到 `supercli-site/scorecard`，旧路径由 GitHub 重定向兜底
+- 自托管升级：`git pull` 后执行 `bash scripts/deploy.sh`（`dist/` 不入库，必须重新构建）
+
 ## 2.5.0 — 2026-10-26
 
 ### 变更
@@ -157,17 +185,10 @@
   CI workflow、SECURITY.md、CONTRIBUTING.md、issue 模板、copilot-instructions.md
 - 自测：用 scorecard 测 scorecard，**6.5 → 8.2**（社区卫生 10 / AI 可读性 10）
 
-## Unreleased
+## 2.0.0 之前（早期未分版本条目，均已随 2.0.0 发布）
 
 ### 特性
 
-- `feat(ui)` — **首页信息层级重排：先完成输入，再探索其他能力**。原来「场景选择 + GEO 入口」压在查询框上面，用户第一眼看到的是四张说明卡，而不是那个「开始体检」的入口 —— 入口藏在一堆解释性内容之后，是这版要解决的核心问题
-  - 查询框提到场景选择之上，**「开始体检」成为首屏第一动作**；场景卡与 GEO 入口下移到查询与示例 chip 之后，成为「已经知道自己要什么」的补充，而不是进门第一眼
-  - 标题从固定字号改 `clamp(42px, 5.2vw, 68px)`，正文放宽到 720px / 16px / 行高 1.85 —— 原来 1080px 容器里挤在一列，标题与正文都偏小
-  - 卡片、输入框、chip、维度说明卡统一到 12px 圆角与同一套留白（间距 12px / 28px / 56px 三级），不再各用各的
-  - 输入框补 `aria-label`（原来只有 placeholder，屏幕阅读器读不到用途）
-  - 移动端（≤700px）场景卡改两列，输入框与按钮等比缩小
-  - 对比度实测：新增文字色全部过 AA（7.88:1 ~ 14.21:1）；卡片边框低于 WCAG 非文字 3:1，但**优于改版前基线**（新 2.06:1 vs 旧 1.55:1），不是回归
 - `feat(audit-geo)` — **接本机 LLM 网关 `magpie`（第五路 provider）**。它同时带来一个只有本地才有的能力：真正的多模型可见性测量
   - `SCORECARD_GEO_MAGPIE_BASE` / `_KEY` / `_MODEL` / `_MAX_TOKENS`，跑本地实例才需要
   - **禁用 `claude/*` 池**：那一池走使用者自己 Claude Code 会话的额度，GEO 跑一次就烧一次写代码的额度（实测直接回 `rate_limit_error`）。`modelgo-gateway/claude-*` 不算 —— 它有独立 endpoint 和 ModelGo key，计费分开
