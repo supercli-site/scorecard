@@ -411,6 +411,26 @@ const INSTALL_HINTS = [
 // 图形界面安装路径不是 shell 命令；只在同一行明确出现宿主、插件、搜索和安装时识别。
 const DSH_GUI_INSTALL = /(?:DeepSeek\s+Harness|\bDSH\b)[^\n]{0,100}(?:插件|plugins?)[^\n]{0,80}(?:搜索|search)[^\n]{0,120}(?:安装|install)/i
 
+// 只识别同一 shell 代码块中依次克隆目标仓库、进入默认目录、安装依赖；
+// 单独的 npm install 不证明路径完整。仍需人工执行以验证命令有效。
+function hasCloneInstallPath(readme, repository) {
+  const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const repo = repository.split('/')[1]
+  const clone = new RegExp(`^\\s*(?:\\$\\s*)?git\\s+clone\\s+https://github\\.com/${escape(repository)}(?:\\.git)?\\s*(?:#.*)?$`, 'i')
+  const enter = new RegExp(`^\\s*(?:\\$\\s*)?cd\\s+(?:\\./)?${escape(repo)}/?\\s*(?:#.*)?$`, 'i')
+  const install = /^\s*(?:\$\s*)?(?:(?:npm|pnpm|bun)\s+(?:install|ci)|yarn(?:\s+install)?)\s*(?:#.*)?$/i
+  for (const match of readme.matchAll(/^```(?:sh|bash|shell|zsh)?[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gmi)) {
+    let stage = 0
+    for (const line of match[1].split(/\r?\n/)) {
+      if (stage === 0 && clone.test(line)) stage = 1
+      else if (stage === 1 && enter.test(line)) stage = 2
+      else if (stage === 2 && install.test(line)) return true
+      else if (stage > 0 && /^\s*(?:\$\s*)?cd(?:\s|$)/i.test(line)) stage = 0
+    }
+  }
+  return false
+}
+
 // Actions 里不全是工程质量信号：自动关闭陈旧讨论、同步标签、定时提醒都可能失败，
 // 但不能因此给项目贴上「红 CI」标签。只让明确承担构建/验证/发布职责的工作流参与判分。
 const ENGINEERING_WORKFLOW = /(?:^|[\s:_/.-])(?:ci|test|tests|build|lint|typecheck|check|verify|publish|release|deploy)(?:$|[\s:_/.-])/i
@@ -679,6 +699,10 @@ export async function auditProject({ owner, repo, token, source }) {
       const hits = INSTALL_HINTS.filter((h) => h.re.test(readme))
       if (hits.length) {
         ev.push(`README 给了安装方式：${hits.slice(0, 3).map((h) => h.how).join('、')}`)
+        score += 3
+      } else if (hasCloneInstallPath(readme, full)) {
+        ev.push('README 给出克隆目标仓库并安装依赖的步骤')
+        manual.push('实际执行克隆、依赖安装与启动命令，核实当前环境可用')
         score += 3
       } else if (DSH_GUI_INSTALL.test(readme)) {
         ev.push('README 给出 DSH 插件界面搜索和安装路径')
