@@ -63,6 +63,18 @@
   --home-card-border: #29435f;
   --home-tile-border: #29394a;
   --home-tile-active-border: #6aa9ed;
+
+  /* ===== 报告页 / 对比模式配色（2026-11-09 从组件里收口）=====
+     原先直接写在 Scorecard.vue 里，值保持不变，只是集中到这里。 */
+  --on-accent-text: #0d1117;        /* 实心 accent 底上的文字 */
+  --title-grad-start: #a9bccf;      /* 旧大标题渐变起点 */
+  --compare-a: #b08585;             /* 对比 A 侧；也用于下降（负 delta / 复测下降） */
+  --compare-a-soft: rgba(176, 133, 133, 0.16);
+  --compare-b: #7d9d8c;             /* 对比 B 侧；旧标题渐变终点 */
+  --compare-b-soft: rgba(125, 157, 140, 0.18);
+  --compare-b-line: rgba(125, 157, 140, 0.9); /* 雷达「同类中位」虚线 */
+  --delta-down: var(--compare-a);
+  --radar-score-text: #c9d1d9;
 }
 
 * {

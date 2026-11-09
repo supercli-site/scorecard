@@ -559,10 +559,10 @@ function onDimToggle(d, e) {
 }
 
 function bandColor(score) {
-  if (score >= 9) return '#34d399' // --score-top
-  if (score >= 6) return '#58a6ff' // --score-ok
-  if (score >= 3) return '#e3b341' // --score-warn
-  return '#f47067'                 // --score-bad
+  if (score >= 9) return 'var(--score-top)'
+  if (score >= 6) return 'var(--score-ok)'
+  if (score >= 3) return 'var(--score-warn)'
+  return 'var(--score-bad)'
 }
 function bandLabel(score) {
   if (score >= 9) return '⭐ 卓越'
@@ -1375,7 +1375,7 @@ onMounted(() => {
   margin: 14px 0 10px;
 }
 .sc-h1 .grad {
-  background: linear-gradient(115deg, #a9bccf 0%, var(--accent) 60%, #7d9d8c 100%);
+  background: linear-gradient(115deg, var(--title-grad-start) 0%, var(--accent) 60%, var(--compare-b) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1510,8 +1510,8 @@ onMounted(() => {
   margin-right: 4px;
   flex-shrink: 0;
 }
-.sc-side-tag.a { background: rgba(176, 133, 133, 0.16); color: #b08585; }
-.sc-side-tag.b { background: rgba(125, 157, 140, 0.18); color: #7d9d8c; }
+.sc-side-tag.a { background: var(--compare-a-soft); color: var(--compare-a); }
+.sc-side-tag.b { background: var(--compare-b-soft); color: var(--compare-b); }
 .sc-side-tag.big { width: 36px; height: 36px; line-height: 36px; font-size: 16px; margin-right: 0; margin-bottom: 8px; }
 .sc-vs { color: var(--text-dim); font-size: 16px; padding: 0 4px; }
 
@@ -1530,8 +1530,8 @@ onMounted(() => {
   text-align: center;
   gap: 6px;
 }
-.sc-compare-side.a .sc-compare-score { color: #b08585; }
-.sc-compare-side.b .sc-compare-score { color: #7d9d8c; }
+.sc-compare-side.a .sc-compare-score { color: var(--compare-a); }
+.sc-compare-side.b .sc-compare-score { color: var(--compare-b); }
 .sc-compare-project {
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 13px;
@@ -1564,7 +1564,7 @@ onMounted(() => {
   font-family: ui-monospace, SFMono-Regular, monospace;
   color: var(--accent);
 }
-.sc-compare-delta.neg { color: #b08585; }
+.sc-compare-delta.neg { color: var(--delta-down); }
 .sc-compare-summary { font-size: 12px; }
 
 .sc-compare-dims { margin-top: 16px; }
@@ -1623,7 +1623,7 @@ onMounted(() => {
   font-weight: 700;
   color: var(--accent);
 }
-.sc-compare-delta-num.neg { color: #b08585; }
+.sc-compare-delta-num.neg { color: var(--delta-down); }
 
 .sc-compare-actionable {
   margin-top: 20px;
@@ -1794,7 +1794,7 @@ onMounted(() => {
 .sc-steps li.done .sc-step-icon {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0d1117;
+  color: var(--on-accent-text);
 }
 
 /* ---------- REPORT ---------- */
@@ -1808,7 +1808,7 @@ onMounted(() => {
 .sc-card {
   background:
     radial-gradient(1200px 400px at 85% -10%, rgba(88, 166, 255, 0.09), transparent 60%),
-    linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+    linear-gradient(180deg, var(--bg-elev) 0%, var(--bg) 100%);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 28px;
@@ -2001,7 +2001,7 @@ onMounted(() => {
   font-size: 9px;
   font-family: ui-monospace, SFMono-Regular, monospace;
 }
-.sc-radar-score { fill: #c9d1d9; }
+.sc-radar-score { fill: var(--radar-score-text); }
 /* 图例：两条参考线各代表什么，别让读者猜 */
 .sc-radar-legend {
   display: flex;
@@ -2017,9 +2017,9 @@ onMounted(() => {
   width: 14px; height: 0; display: inline-block;
   border-top: 2px solid var(--accent);
 }
-.sc-radar-legend .lg-base { border-top: 2px dashed rgba(125, 157, 140, 0.9); }
+.sc-radar-legend .lg-base { border-top: 2px dashed var(--compare-b-line); }
 .sc-radar-legend .lg-pass { border-top: 2px dashed rgba(210, 153, 34, 0.7); }
-.sc-radar-legend .lg-n { color: #6e7681; }
+.sc-radar-legend .lg-n { color: var(--text-dim); }
 
 /* 维度条 */
 .sc-dims {
@@ -2192,7 +2192,7 @@ onMounted(() => {
   font-variant-numeric: tabular-nums;
 }
 .sc-recheck-delta.up { color: var(--success); }
-.sc-recheck-delta.down { color: #b08585; }
+.sc-recheck-delta.down { color: var(--delta-down); }
 .sc-recheck-delta.flat { color: var(--text-dim); }
 .sc-section-kicker {
   margin: 0 0 3px;

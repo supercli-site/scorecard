@@ -189,7 +189,7 @@ onMounted(async () => {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--accent);
-  color: #0d1117;
+  color: var(--on-accent-text);
   font-weight: 700;
   font-size: 9px;
   letter-spacing: 0.16em;
