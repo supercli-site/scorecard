@@ -425,7 +425,7 @@ function hasCloneInstallPath(readme, repository) {
       if (stage === 0 && clone.test(line)) stage = 1
       else if (stage === 1 && enter.test(line)) stage = 2
       else if (stage === 2 && install.test(line)) return true
-      else if (stage === 2 && /^\s*(?:\$\s*)?cd(?:\s|$)/i.test(line)) stage = 0
+      else if (stage > 0 && /^\s*(?:\$\s*)?cd(?:\s|$)/i.test(line)) stage = 0
     }
   }
   return false

@@ -192,6 +192,7 @@ test('其他仓库或缺少进入目录的片段不算目标仓库安装路径',
     '```sh\ngit clone https://github.com/example/project.git\nbun install\n```',
     '```sh\ngit clone https://github.com/example/project.git\ncd project\n```\n```sh\nbun install\n```',
     '```sh\ngit clone https://github.com/example/project.git\ncd project\ncd ../other\nbun install\n```',
+    '```sh\ngit clone https://github.com/example/project.git\ncd /tmp\ncd project\nbun install\n```',
     '```sh\ngit clone https://github.com/example/project.git.evil.test\ncd project\nbun install\n```',
   ]) {
     const f = fixture({ readme })
