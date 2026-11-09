@@ -745,34 +745,6 @@ onMounted(() => {
         做的不是一件事 —— 那个管供应链安全，这个管项目成熟度。
       </p>
 
-      <!-- GEO 入口：独立路由，不占上面的单/对比两个 tab —— 它的表单形态完全不同 -->
-      <button class="sc-geo-entry" type="button" @click="location.hash = '#/geo'">
-        <Icon name="eye" :size="15" />
-        <span class="sc-geo-entry-main">
-          <strong>测品牌的 AI 可见性</strong>
-          <em>GEO · 别人问 ChatGPT「XX 类产品有哪些」时，你在不在答案里</em>
-        </span>
-        <Icon name="arrow-right" :size="15" />
-      </button>
-
-      <!-- 场景选择：先说「你是谁、要干嘛」，再说输入框。
-           不新增功能，只是把同一套判据按用户当下的问题重排先后。 -->
-      <div class="sc-scenarios" role="radiogroup" aria-label="选择你的场景">
-        <button
-          v-for="s in SCENARIOS"
-          :key="s.key"
-          class="sc-scenario"
-          :class="{ active: scenario === s.key }"
-          type="button"
-          role="radio"
-          :aria-checked="scenario === s.key"
-          @click="scenario = s.key; if (s.key === 'compare') mode = 'compare'; else if (mode === 'compare') mode = 'single'"
-        >
-          <span class="sc-scenario-label">{{ s.label }}</span>
-          <span class="sc-scenario-hint">{{ s.hint }}</span>
-        </button>
-      </div>
-
       <!-- 模式 tab：单目标 vs 对比 -->
       <div class="sc-mode-tabs">
         <button
@@ -797,7 +769,8 @@ onMounted(() => {
             v-model="input"
             class="sc-input"
             type="text"
-            placeholder="github.com/owner/repo  ·  @user 测 GitHub 首页"
+            aria-label="输入 GitHub 仓库、npm 包、网址或 GitHub 用户名"
+            placeholder="输入 GitHub 仓库、npm 包或网址"
             spellcheck="false"
             autocomplete="off"
             @keydown.enter.prevent="generate"
@@ -851,6 +824,35 @@ onMounted(() => {
         <button class="sc-chip" @click="input = 'vitejs/vite'; generate()">vitejs/vite</button>
         <button class="sc-chip" @click="input = 'denoland/deno'; generate()">denoland/deno</button>
       </div>
+
+      <!-- GEO 入口：独立路由，不占上面的单/对比两个 tab —— 它的表单形态完全不同 -->
+      <button class="sc-geo-entry" type="button" @click="location.hash = '#/geo'">
+        <Icon name="eye" :size="15" />
+        <span class="sc-geo-entry-main">
+          <strong>测品牌的 AI 可见性</strong>
+          <em>GEO · 别人问 ChatGPT「XX 类产品有哪些」时，你在不在答案里</em>
+        </span>
+        <Icon name="arrow-right" :size="15" />
+      </button>
+
+      <!-- 场景选择：先说「你是谁、要干嘛」，再说输入框。
+           不新增功能，只是把同一套判据按用户当下的问题重排先后。 -->
+      <div class="sc-scenarios" role="radiogroup" aria-label="选择你的场景">
+        <button
+          v-for="s in SCENARIOS"
+          :key="s.key"
+          class="sc-scenario"
+          :class="{ active: scenario === s.key }"
+          type="button"
+          role="radio"
+          :aria-checked="scenario === s.key"
+          @click="scenario = s.key; if (s.key === 'compare') mode = 'compare'; else if (mode === 'compare') mode = 'single'"
+        >
+          <span class="sc-scenario-label">{{ s.label }}</span>
+          <span class="sc-scenario-hint">{{ s.hint }}</span>
+        </button>
+      </div>
+
 
       <div class="sc-trust">
         <span class="sc-trust-dot" />
@@ -2568,5 +2570,45 @@ onMounted(() => {
   .sc-board-bar {
     display: none;
   }
+}
+/* 首页视觉层级：先完成输入，再探索其他能力。 */
+.sc-wrap { max-width: 1120px; padding: 64px 32px 80px; }
+.sc-hero { max-width: 100%; }
+.sc-eyebrow { color: #a8c8e8; background: transparent; border-color: #38516d; padding: 6px 11px; letter-spacing: .14em; }
+.sc-h1 { font-size: clamp(42px, 5.2vw, 68px); line-height: 1.12; letter-spacing: -.045em; margin: 25px 0 22px; }
+.sc-h1 .grad { background: none; color: #86bfff; }
+.sc-sub { max-width: 720px; font-size: 16px; line-height: 1.85; color: #b1bdcc; margin-bottom: 24px; }
+.sc-sub-diff { font-size: 13px; color: #99a9bb; margin: 0 0 40px; }
+.sc-mode-tabs { margin-bottom: 12px; gap: 8px; }
+.sc-mode-tab { border-radius: 8px; color: #adbbca; padding: 9px 16px; font-weight: 600; }
+.sc-mode-tab.active { color: #10243a; background: #9bcaff; border-color: #9bcaff; }
+.sc-form { margin-bottom: 14px; }
+.sc-input-wrap { border-radius: 12px; min-height: 72px; background: #141e2b; border-color: #38495f; padding: 8px 9px 8px 20px; }
+.sc-input { font-size: 15px; }
+.sc-go { min-height: 48px; min-width: 118px; border-radius: 8px; }
+.sc-chips { margin-bottom: 32px; }
+.sc-geo-entry { color: #b7cbe2; border-radius: 12px; padding: 20px; margin: 8px 0 16px; background: #132133; border-color: #29435f; }
+.sc-geo-entry-main strong { font-size: 15px; font-weight: 650; }
+.sc-geo-entry-main em { font-size: 13px; color: #a4b6ca; }
+.sc-scenarios { gap: 12px; margin-bottom: 28px; }
+.sc-scenario { min-height: 104px; border-radius: 12px; padding: 18px; background: #131c28; border: 1px solid #29394a; }
+.sc-scenario.active { border-color: #6aa9ed; background: #182b41; }
+.sc-scenario-label { font-size: 15px; }
+.sc-scenario-hint, .sc-scenario.active .sc-scenario-hint { font-size: 13px; line-height: 1.6; color: #a6b6c9; }
+.sc-trust { color: #a6b6c9; }
+.sc-dims-guide, .sc-board { margin-top: 56px; }
+.sc-board-title { font-size: 20px; }
+.sc-dims-grid { gap: 12px; }
+.sc-dim-card { border-radius: 12px; padding: 18px; }
+.sc-dim-card-name { font-size: 14px; }
+.sc-dim-card-q { color: #a6b6c9; font-size: 13px; line-height: 1.6; }
+@media (max-width: 700px) {
+  .sc-wrap { padding: 42px 20px 64px; }
+  .sc-h1 { font-size: 40px; }
+  .sc-sub { font-size: 15px; }
+  .sc-scenarios { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sc-scenario { padding: 14px; }
+  .sc-input-wrap { min-height: 64px; padding-left: 12px; }
+  .sc-go { min-width: 78px; }
 }
 </style>
