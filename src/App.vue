@@ -19,6 +19,7 @@ import { ref, onMounted } from 'vue'
 import Scorecard from './components/Scorecard.vue'
 import GeoCard from './components/GeoCard.vue'
 import Icon from './components/Icon.vue'
+import PlaybookPage from './components/PlaybookPage.vue'
 import { useVersionCheck } from 'vite-plugin-refresh-guard/vue'
 import UpdatePrompt from 'vite-plugin-refresh-guard/vue/UpdatePrompt.vue'
 
@@ -59,6 +60,7 @@ function parseRoute() {
   const [hashPath, hashQuery = ''] = hash.split('?')
   const parts = hashPath.split('/').filter(Boolean)
   if (parts[0] === 'report') return { name: 'report', repo: parts.slice(1).join('/'), compare: null }
+  if (parts[0] === 'playbook') return { name: 'playbook', repo: '', compare: null }
   if (parts[0] === 'geo') {
     return { name: 'geo', repo: '', compare: null, geoQuery: hashQuery }
   }
@@ -101,6 +103,13 @@ onMounted(async () => {
         <span class="brand-ver">v{{ appVersion }}</span>
       </div>
       <a
+        class="topbar-link topbar-link--pro"
+        href="#/playbook"
+        title="发布打法 · 高阶指导（限时免费）"
+      >
+        <span>发布打法</span><span class="topbar-pro-tag">PRO</span>
+      </a>
+      <a
         class="topbar-link"
         href="https://github.com/supercli-site/scorecard"
         target="_blank"
@@ -116,6 +125,8 @@ onMounted(async () => {
            而 GEO 要品牌名 + 域名 + 问题清单 + 竞品四个字段，判据完全不同。
            geoQuery 进 key 是为了让分享链接切换品牌时组件重建。 -->
       <GeoCard v-if="route.name === 'geo'" :key="'geo' + (route.geoQuery || '')" />
+      <!-- 发布打法：站内唯一入口的落点（顶栏「发布打法」与报告引导卡都指向这里） -->
+      <PlaybookPage v-else-if="route.name === 'playbook'" />
       <!-- key 让落地页与报告页 / 对比页切换时组件重建，避免上一次的 stage 残留 -->
       <Scorecard
         v-else
@@ -169,5 +180,18 @@ onMounted(async () => {
 }
 .topbar-link:hover {
   color: var(--text);
+}
+.topbar-link--pro {
+  color: var(--text);
+  gap: 8px;
+}
+.topbar-pro-tag {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #0d1117;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.16em;
 }
 </style>
