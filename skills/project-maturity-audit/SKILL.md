@@ -88,7 +88,10 @@ version: 1.0.0
 
 #### ② 分发 Distribution
 
-- 是否发布到 registry（npm/PyPI/crates/…）？`npm view <pkg> version` / `pip index versions <pkg>`。
+- 是否发布到 registry（npm/PyPI/crates/…）？`npm view <pkg> version` / `pip index versions <pkg>`。清单文件常在子目录（`rust/Cargo.toml`、`python/pyproject.toml`），根目录没有不代表没发布。
+- **发布物料**（一份物料三处复用：README / 社媒 / 落地页，节奏见 `docs/launch-playbook.md`）：
+  - README 里的 demo 动图/视频 —— 终端项目用 vhs 录制，GUI 项目用 Screen Studio；README、社媒、落地页共用同一份。
+  - README 头部 badges（license / 版本 / build）—— 让项目状态一眼可见；shields.io 三件套就够，徽章超过 6 个反而稀释可信度。
 - 生态收录：逐个核对社区实际目录条目与上游 PR 的 `merged` 状态，保留准确链接。同一目录的多次更新不是多个社区；关闭不等于合并，上游主题收录也不等于下游插件被官方认证。只有实际搜索并覆盖目标目录后才能说“未查到”；权限或网络受限时标记 manual/unverifiable，说明未核实的范围。
 - 推广：先准备符合用户语气与平台的文案及素材；向他人发帖、评论或发送消息必须有用户明确指令。用户要求自行发布时，仅交付稿件和素材，不代发。
 - 流量来源：`gh api repos/<r>/traffic/popular/referrers`（需 push 权限）。

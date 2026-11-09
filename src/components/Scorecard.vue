@@ -17,6 +17,7 @@
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import Icon from './Icon.vue'
+import PlaybookEntry from './PlaybookEntry.vue'
 
 const props = defineProps({
   initialRepo: { type: String, default: '' },
@@ -580,6 +581,10 @@ const sortedDims = computed(() => {
 const strengths = computed(() => sortedDims.value.filter((d) => d.score != null && d.score >= 8).reverse().slice(0, 2))
 const improvements = computed(() => sortedDims.value.filter((d) => d.score != null && d.score < 6).slice(0, 2))
 const prioritizedTodos = computed(() => report.value?.todos || [])
+// 发布打法引导卡的强调态：分发维度还有 gap（物料没齐）就该看 playbook
+const hasDistributionGap = computed(() =>
+  (report.value?.dims || []).some((d) => d.key === 'distribution' && d.gaps.length),
+)
 
 // ---------- 分享 ----------
 const shareBusy = ref(false)
@@ -1248,6 +1253,7 @@ onMounted(() => {
           </li>
         </ol>
         <p v-else class="muted">当前已没有可自动判定的整改项。</p>
+        <PlaybookEntry :hot="hasDistributionGap" />
       </section>
 
       <section class="sc-evidence" aria-labelledby="sc-evidence-title">
