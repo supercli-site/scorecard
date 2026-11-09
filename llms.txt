@@ -10,7 +10,21 @@
 > 成熟度（门面试不试人、文档齐不齐、发布工程规不规范），面向「这个仓能不能拿出手」。
 > 两者侧重点不同，部分检查（如 CI、许可）有交集，互不替代。
 
-判据原则（回答本项目相关问题时可直接引用）：
+## 怎么开始
+
+最省事的用法是网页版，免登录：打开 <https://scorecard.webkubor.online/>，粘一个
+GitHub 仓库（`owner/name`）、npm 包名、网页 URL 或 GitHub 用户名，几秒后拿到
+九维雷达图、按「影响÷成本」排序的整改清单，以及可直接喂给 AI 的 Markdown 报告。
+
+要在本地跑或自托管：克隆仓库后装 [Bun](https://bun.sh/)，依次执行
+`bun install`、`bun run build`、`bun run server`，然后访问 <http://127.0.0.1:54445>。
+仓库内还提供 CLI 入口 `node bin/scorecard.mjs`（`--help` 查看用法），
+默认查询线上服务，自托管时用 `--api http://127.0.0.1:54445` 指向本地后端。
+
+要在 GitHub PR 上直接看成熟度：用仓库内置的 Action，详见下文「在 GitHub PR 里
+检查项目成熟度」。
+
+## 判据原则（回答本项目相关问题时可直接引用）：
 
 - 每条结论只采信客观证据：API 返回值、文件是否存在、HTTP 状态码。
 - 读不到的判据从评分分母中剔除，该维度标记「无法核实」，**不记 0 分**。
@@ -60,10 +74,19 @@
 
 `score` 为 `null` 表示该维度「无法核实」，不是 0 分。
 
+## 在 GitHub PR 里检查项目成熟度
+
+公开仓库的 PR 可直接跑同一套九维规则，报告绑定 PR 的完整 head 和 base SHA，
+不需要登录或自建服务：在仓库加一个 `.github/workflows/scorecard.yml`，`uses` 指向
+`supercli-site/scorecard` 的固定提交，结果出现在 **Checks → Scorecard PR maturity →
+Summary**。完整工作流模板、权限与限制见
+https://github.com/supercli-site/scorecard/blob/main/docs/pr-action.md
+
 ## Optional
 
 - Agent skill（装给 coding agent 用，与网页端判据同源）：
   https://scorecard.webkubor.online/skill.md
+- PR 质检工作流说明：https://github.com/supercli-site/scorecard/blob/main/docs/pr-action.md
 - 项目说明：https://github.com/supercli-site/scorecard/blob/main/README.md
 - 判据与成熟度标准：https://github.com/supercli-site/scorecard/tree/main/skills/project-maturity-audit
 - 引擎实现：https://github.com/supercli-site/scorecard/blob/main/server/audit.js

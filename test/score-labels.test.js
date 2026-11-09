@@ -74,6 +74,16 @@ test('对外文案不做绝对保证，且两份 llms 同源', () => {
   expect(readFileSync(root + 'llms.txt', 'utf8')).toBe(readFileSync(root + 'public/llms.txt', 'utf8'))
 })
 
+test('llms 保留最短使用路径与 PR 质检入口', () => {
+  const text = readFileSync(root + 'llms.txt', 'utf8')
+  expect(text).toContain('## 怎么开始')
+  expect(text).toContain('bun run server')
+  expect(text).toContain('node bin/scorecard.mjs')
+  expect(text).toContain('## 在 GitHub PR 里检查项目成熟度')
+  expect(text).toContain('docs/pr-action.md')
+  expect(text).toContain('https://scorecard.webkubor.online/')
+})
+
 test('GEO 201 问中仅一次提及时总分可能为 0，但文案保持中性', async () => {
   const questions = Array.from({ length: 201 }, (_, i) => `问题 ${i + 1}？`)
   const adapter = {
