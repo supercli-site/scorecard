@@ -1,0 +1,5 @@
+Contact: https://github.com/supercli-site/scorecard/security/advisories/new
+Expires: 2027-11-09T00:00:00Z
+Preferred-Languages: zh, en
+Canonical: https://scorecard.supercli.site/.well-known/security.txt
+Policy: https://github.com/supercli-site/scorecard/blob/main/SECURITY.md

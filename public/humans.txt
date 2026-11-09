@@ -1,0 +1,6 @@
+/* TEAM */
+Scorecard contributors
+Source: https://github.com/supercli-site/scorecard
+
+/* PROJECT */
+Evidence-based audits for open-source projects, packages, websites and profiles.

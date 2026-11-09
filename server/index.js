@@ -10,7 +10,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/bun'
-import { readFile, mkdir } from 'node:fs/promises'
+import { readFile, mkdir, stat } from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -173,6 +173,28 @@ function extractMeta(report, type) {
 }
 
 const app = new Hono()
+
+// Inline scripts include the chunk recovery handler; Vue also uses inline styles.
+app.use('*', async (c, next) => {
+  await next()
+  c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
+  c.header('Strict-Transport-Security', 'max-age=31536000')
+  c.header('X-Frame-Options', 'DENY')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  if (c.req.path === '/api' || c.req.path.startsWith('/api/')) {
+    c.header('Cache-Control', 'no-store')
+    c.header('Last-Modified', undefined)
+    c.header('ETag', undefined)
+  }
+})
+
+const staticModified = (cacheControl) => async (path, c) => {
+  const info = await stat(path)
+  c.header('Last-Modified', info.mtime.toUTCString())
+  c.header('Cache-Control', cacheControl)
+}
 
 /*
  * CORS —— 给 GHAM（gham.webkubor.online）页面嵌「快速质检」用：它的项目详情页
@@ -1118,21 +1140,28 @@ app.get('/api/skill', async (c) => {
 
 // ---------- static + SPA fallback（注册在最后，让 /api/* 优先） ----------
 if (HAS_DIST) {
-  app.use('/assets/*', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } }))
-  app.use('/favicon.svg', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
+  app.use('/assets/*', serveStatic({ root: DIST_DIR, onFound: staticModified('public, max-age=31536000, immutable') }))
+  app.use('/favicon.svg', serveStatic({ root: DIST_DIR, onFound: staticModified('public, max-age=3600') }))
   // 自己的 robots.txt —— 放行所有爬虫（含 AI 爬虫）。必须在通配 catch-all
   // 之前注册，否则 SPA fallback 会拿 index.html 顶替。
-  app.use('/robots.txt', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
+  app.use('/robots.txt', serveStatic({ root: DIST_DIR, onFound: staticModified('public, max-age=3600') }))
   // 自己的 llms.txt —— 第九维「AI 可读性」的判据之一，Scorecard 也要达标。
   // public/llms.txt 会被 Vite 拷进 dist/；必须先于下面通配 catch-all 注册，
   // 否则 SPA fallback 会拿 index.html 顶替，被自己的引擎判成「空壳」。
-  app.use('/llms.txt', serveStatic({ root: DIST_DIR, headers: { 'Cache-Control': 'public, max-age=3600' } }))
+  app.use('/llms.txt', serveStatic({ root: DIST_DIR, onFound: staticModified('public, max-age=3600') }))
   // 自己的 sitemap.xml —— robots.txt 里声明了绝对 URL，抓取器会来取。
   // 同样必须在 catch-all 之前注册：SPA fallback 用 index.html 顶替 XML 是线上实证过的坑。
   app.get('/sitemap.xml', sitemapHandler(DIST_DIR))
+  app.use('/version.json', serveStatic({ root: DIST_DIR, onFound: staticModified('no-cache') }))
+  app.get('/version.json', (c) => c.notFound())
+  for (const path of ['/humans.txt', '/.well-known/security.txt']) {
+    app.use(path, serveStatic({ root: DIST_DIR, onFound: staticModified('public, max-age=3600') }))
+    app.get(path, (c) => c.notFound())
+  }
   app.get('*', async (c) => {
     if (c.req.path.startsWith('/api/')) return c.notFound()
     c.header('Cache-Control', 'no-cache, must-revalidate')
+    c.header('Last-Modified', (await stat(join(DIST_DIR, 'index.html'))).mtime.toUTCString())
     return c.html(await readFile(join(DIST_DIR, 'index.html'), 'utf8'))
   })
 }

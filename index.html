@@ -21,6 +21,9 @@
     <meta name="twitter:title" content="Scorecard · 做决定之前，先跑一次体检" />
     <meta name="twitter:description" content="粘一个 GitHub 仓库 / npm 包 / 网页 URL，拿九维度雷达图与整改清单。读不到的判据标「无法核实」而非 0 分。" />
     <title>Scorecard · 做决定之前，先跑一次体检</title>
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Scorecard","url":"https://scorecard.supercli.site/","applicationCategory":"DeveloperApplication","operatingSystem":"Web","description":"开源项目、npm 包、网页与 GitHub 首页的证据化质检工具。","isAccessibleForFree":true}
+    </script>
     <script>
       // 部署后 CDN 边缘节点没同步齐，老页面按旧 hash 请求 chunk 会 404/返回 index.html 的
       // fallback（MIME 是 text/html，浏览器拒绝当模块执行）——vite 会抛 vite:preloadError。
@@ -43,12 +46,15 @@
     <div id="app">
       <main style="max-width: 52rem; margin: 3rem auto; padding: 0 1.25rem; line-height: 1.65;">
       <h1>Scorecard：开源项目成熟度质检 / Open-source project maturity audit</h1>
-      <p lang="zh-CN">粘一个 GitHub 仓库 / npm 包 / 网页 URL，按客观判据给出各维度评分与整改清单；读不到的项标「无法核实」而非 0 分，总分只反映可核实的证据。免登录。</p>
-      <p lang="en">Paste a GitHub repository, npm package or website URL to get evidence-based dimension scores and a fix list; unverifiable items are excluded from scoring instead of counting as zero. No login required.</p>
-      <ul>
+      <section><h2>检查什么</h2>
+      <p lang="zh-CN">粘一个 GitHub 仓库、npm 包、网页 URL 或 GitHub 用户名，按各自的客观判据获得维度评分与整改清单。品牌 GEO 使用独立的可见性判据。</p>
+      <p lang="en">Audit a GitHub repository or profile, npm package or website against evidence-based criteria. Brand GEO uses its own visibility criteria.</p></section>
+      <section><h2>如何解读报告</h2><p>读不到的项标「无法核实」而非 0 分；报告列出证据、缺口与需要人工核实的内容。不同类型的判据互不通用。</p></section>
+      <section><h2>使用与项目资料</h2><p>网页免登录；也可查看开源代码及项目质检技能说明。</p>
+      <nav aria-label="项目资料"><ul>
         <li><a href="https://github.com/supercli-site/scorecard">GitHub 仓库 supercli-site/scorecard</a></li>
         <li><a href="/skill.md">project-maturity-audit skill（Markdown）</a></li>
-      </ul>
+      </ul></nav></section>
       </main>
     </div>
     <script type="module" src="/src/main.js"></script>
