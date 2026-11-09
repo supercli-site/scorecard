@@ -48,7 +48,7 @@ function looksLikeHtml(text) {
 async function safeJson(url, { timeout = 15000 } = {}) {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.webkubor.online)' },
+      headers: { 'User-Agent': 'scorecard-audit (+https://scorecard.supercli.site)' },
       signal: AbortSignal.timeout(timeout),
     })
     if (!res.ok) return { ok: false, status: res.status, data: null }

@@ -27,7 +27,7 @@
  *   scorecard geo --brand X --q "..." --min 5   GEO 也能当闸门（会花钱，别放进 CI 每轮跑）
  */
 
-const DEFAULT_API = process.env.SCORECARD_API || 'https://scorecard.webkubor.online'
+const DEFAULT_API = process.env.SCORECARD_API || 'https://scorecard.supercli.site'
 
 /**
  * 目标形态 → type。单目标与 --compare 共用一份规则，免得「单目标认得、对比不认得」：

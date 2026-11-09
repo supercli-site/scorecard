@@ -45,7 +45,7 @@ export function renderSummary(report, context) {
   }
   const manual = (report.dims || []).flatMap((dim) => (dim.manual || []).map((item) => `- **${safe(dim.name)}**: ${safe(item)}`))
   if (manual.length) lines.push('', '<details><summary>Manual and unverifiable checks</summary>', '', ...manual, '', '</details>')
-  lines.push('', `Scanned at ${safe(report.ts)}. [Scorecard project](https://github.com/supercli-site/scorecard) · [Open the web tool](https://scorecard.webkubor.online/)`, '')
+  lines.push('', `Scanned at ${safe(report.ts)}. [Scorecard project](https://github.com/supercli-site/scorecard) · [Open the web tool](https://scorecard.supercli.site/)`, '')
   return lines.join('\n')
 }
 

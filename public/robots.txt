@@ -4,4 +4,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://scorecard.webkubor.online/sitemap.xml
+Sitemap: https://scorecard.supercli.site/sitemap.xml

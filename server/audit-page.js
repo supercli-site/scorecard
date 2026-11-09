@@ -19,7 +19,7 @@
  * 所有根目录探测并发一次拉完；HTML 解析用正则（不引第三方依赖，保持 bun 单进程）。
  */
 
-const UA = 'scorecard-audit (+https://scorecard.webkubor.online)'
+const UA = 'scorecard-audit (+https://scorecard.supercli.site)'
 
 const clamp = (n) => Math.max(0, Math.min(10, Math.round(n * 10) / 10))
 

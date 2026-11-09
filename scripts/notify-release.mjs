@@ -12,7 +12,7 @@ import { feishu } from 'im-notify-kit'
 
 const dryRun = process.argv.includes('--dry-run')
 const hook = process.env.SCORECARD_FEISHU_WEBHOOK || ''
-const SITE = 'https://scorecard.webkubor.online'
+const SITE = 'https://scorecard.supercli.site'
 
 const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 

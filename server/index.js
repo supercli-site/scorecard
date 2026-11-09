@@ -36,7 +36,7 @@ const HAS_DIST = existsSync(join(DIST_DIR, 'index.html'))
 // 品牌与站点地址集中在这里 —— OG 图、CTA 文案都从这两个常量取。
 // 散落成字面量的话，改名要改十几处，漏一处就出现两个品牌名并存。
 const BRAND = process.env.SCORECARD_BRAND || 'SCORECARD'
-const SITE_URL = process.env.SCORECARD_SITE_URL || 'scorecard.webkubor.online'
+const SITE_URL = process.env.SCORECARD_SITE_URL || 'scorecard.supercli.site'
 
 // 只读 token（public_repo 足够）。服务端自用，绝不下发给前端。
 const GITHUB_TOKEN = process.env.SCORECARD_GITHUB_TOKEN || ''

@@ -81,7 +81,7 @@ test('llms 保留最短使用路径与 PR 质检入口', () => {
   expect(text).toContain('node bin/scorecard.mjs')
   expect(text).toContain('## 在 GitHub PR 里检查项目成熟度')
   expect(text).toContain('docs/pr-action.md')
-  expect(text).toContain('https://scorecard.webkubor.online/')
+  expect(text).toContain('https://scorecard.supercli.site/')
 })
 
 test('GEO 201 问中仅一次提及时总分可能为 0，但文案保持中性', async () => {
