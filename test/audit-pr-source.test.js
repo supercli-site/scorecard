@@ -175,6 +175,33 @@ test('没有包名的安装命令不会被识别为完整安装路径', async ()
   } finally { f.restore() }
 })
 
+test('同一代码块中的目标仓库克隆和依赖安装可作为安装说明', async () => {
+  const f = fixture({ readme: '## 快速开始\n```bash\ngit clone https://github.com/example/project.git\ncd project\nbun install          # 或 npm install\nbun run build\n```' })
+  try {
+    const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+    const distribution = report.dims.find(d => d.key === 'distribution')
+    expect(distribution.evidence.join(' ')).toContain('克隆目标仓库并安装依赖')
+    expect(distribution.manual.join(' ')).toContain('实际执行')
+    expect(distribution.gaps.join(' ')).not.toContain('找不到一条')
+  } finally { f.restore() }
+})
+
+test('其他仓库或缺少进入目录的片段不算目标仓库安装路径', async () => {
+  for (const readme of [
+    '```sh\ngit clone https://github.com/other/project.git\ncd project\nbun install\n```',
+    '```sh\ngit clone https://github.com/example/project.git\nbun install\n```',
+    '```sh\ngit clone https://github.com/example/project.git\ncd project\n```\n```sh\nbun install\n```',
+    '```sh\ngit clone https://github.com/example/project.git\ncd project\ncd ../other\nbun install\n```',
+    '```sh\ngit clone https://github.com/example/project.git.evil.test\ncd project\nbun install\n```',
+  ]) {
+    const f = fixture({ readme })
+    try {
+      const report = await auditProject({ owner: 'example', repo: 'project', source: { repository: 'example/project', sha: SHA } })
+      expect(report.dims.find(d => d.key === 'distribution').evidence.join(' ')).not.toContain('克隆目标仓库')
+    } finally { f.restore() }
+  }
+})
+
 test('DSH 界面安装说明不被误判为缺少命令，首次操作保留人工核验', async () => {
   const f = fixture({ readme: '### 安装\n在 DeepSeek Harness 的「插件」里搜索 **`example`** 并安装；按提示重启后，点顶栏的按钮。' })
   try {
