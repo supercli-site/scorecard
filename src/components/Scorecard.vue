@@ -2574,12 +2574,13 @@ onMounted(() => {
 /* 首页视觉层级：先完成输入，再探索其他能力。
    色值一律走 global.css 的 --home-* token —— 这组蓝灰阶梯原先硬编码在
    这里，主题一改就会重演 bandColor() 那次漂移。 */
-.sc-wrap { max-width: 1120px; padding: 64px 32px 80px; }
+/* 容器 1000：1120 时正文锁 720，右侧空出 336px 一整条，参照榜也被拉得过宽 */
+.sc-wrap { max-width: 1000px; padding: 64px 32px 80px; }
 .sc-hero { max-width: 100%; }
 .sc-eyebrow { color: var(--home-eyebrow-text); background: transparent; border-color: var(--home-eyebrow-border); padding: 6px 11px; letter-spacing: .14em; }
 .sc-h1 { font-size: clamp(42px, 5.2vw, 68px); line-height: 1.12; letter-spacing: -.045em; margin: 25px 0 22px; }
 .sc-h1 .grad { background: none; color: var(--home-title-grad); }
-.sc-sub { max-width: 720px; font-size: 16px; line-height: 1.85; color: var(--home-lead-text); margin-bottom: 24px; }
+.sc-sub { max-width: 860px; font-size: 16px; line-height: 1.85; color: var(--home-lead-text); margin-bottom: 24px; }
 .sc-sub-diff { font-size: 13px; color: var(--home-note-text); margin: 0 0 40px; }
 .sc-mode-tabs { margin-bottom: 12px; gap: 8px; }
 .sc-mode-tab { border-radius: 8px; color: var(--home-tab-text); padding: 9px 16px; font-weight: 600; }
@@ -2600,7 +2601,8 @@ onMounted(() => {
 .sc-trust { color: var(--home-muted-text); }
 .sc-dims-guide, .sc-board { margin-top: 56px; }
 .sc-board-title { font-size: 20px; }
-.sc-dims-grid { gap: 12px; }
+/* 九维固定 3×3：auto-fit 在宽容器里会算出 5 列，9 张卡第二行空一格 */
+.sc-dims-grid { gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .sc-dim-card { border-radius: 12px; padding: 18px; }
 .sc-dim-card-name { font-size: 14px; }
 .sc-dim-card-q { color: var(--home-muted-text); font-size: 13px; line-height: 1.6; }
@@ -2612,5 +2614,8 @@ onMounted(() => {
   .sc-scenario { padding: 14px; }
   .sc-input-wrap { min-height: 64px; padding-left: 12px; }
   .sc-go { min-width: 78px; }
+}
+@media (max-width: 560px) {
+  .sc-dims-grid { grid-template-columns: 1fr; }
 }
 </style>
