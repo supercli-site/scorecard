@@ -102,7 +102,7 @@ onMounted(async () => {
       </div>
       <a
         class="topbar-link"
-        href="https://github.com/webkubor/scorecard"
+        href="https://github.com/supercli-site/scorecard"
         target="_blank"
         rel="noopener"
       >
@@ -133,7 +133,7 @@ onMounted(async () => {
       </span>
       <span v-else>
         GitHub 仓库九维 / npm 包七维 / 网页九维 / GitHub 首页七维 · 判据互不通用 ·
-        与 <a href="https://github.com/webkubor/scorecard/tree/main/skills/project-maturity-audit"
+        与 <a href="https://github.com/supercli-site/scorecard/tree/main/skills/project-maturity-audit"
            target="_blank" rel="noopener">project-maturity-audit</a> 同源 · 免登录 · 公开目标无需 token
       </span>
     </footer>

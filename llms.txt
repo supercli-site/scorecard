@@ -64,8 +64,8 @@
 
 - Agent skill（装给 coding agent 用，与网页端判据同源）：
   https://scorecard.webkubor.online/skill.md
-- 项目说明：https://github.com/webkubor/scorecard/blob/main/README.md
-- 判据与成熟度标准：https://github.com/webkubor/scorecard/tree/main/skills/project-maturity-audit
-- 引擎实现：https://github.com/webkubor/scorecard/blob/main/server/audit.js
-- 前端面板：https://github.com/webkubor/scorecard/blob/main/src/components/Scorecard.vue
-- AGENTS.md：https://github.com/webkubor/scorecard/blob/main/AGENTS.md
+- 项目说明：https://github.com/supercli-site/scorecard/blob/main/README.md
+- 判据与成熟度标准：https://github.com/supercli-site/scorecard/tree/main/skills/project-maturity-audit
+- 引擎实现：https://github.com/supercli-site/scorecard/blob/main/server/audit.js
+- 前端面板：https://github.com/supercli-site/scorecard/blob/main/src/components/Scorecard.vue
+- AGENTS.md：https://github.com/supercli-site/scorecard/blob/main/AGENTS.md
