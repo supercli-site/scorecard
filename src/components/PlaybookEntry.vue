@@ -58,7 +58,7 @@ const ENTRY = '#/playbook'
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--accent);
-  color: #0d1117;
+  color: var(--on-accent-text);
   font-weight: 700;
   font-size: 10px;
   letter-spacing: 0.18em;

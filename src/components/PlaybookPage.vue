@@ -60,7 +60,7 @@ const ACCESS = 'free' // 'free' | 'paid' —— 转付费时在这里接 gate
   padding: 3px 9px;
   border-radius: 4px;
   background: var(--accent);
-  color: #0d1117;
+  color: var(--on-accent-text);
   font-weight: 700;
   font-size: 10px;
   letter-spacing: 0.2em;
