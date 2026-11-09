@@ -446,16 +446,19 @@ export async function auditPage({ url }) {
       ev.push('没有 robots.txt —— 按协议默认放行所有爬虫（含 AI）'); score += 2
     }
 
-    // sitemap.xml：不仅判"是不是有效 XML"，还要看里面 URL 数。1 个 URL 的 sitemap 等于没有；
-// 一个产品站点的 sitemap 应当覆盖全部可索引页面（典型 10+）。阈值按"明显不合理"给：
-// < 5 → 几乎等于没写；≥ 50 → 健康。
-if (sitemap.ok && /<\?(xml|xml-stylesheet)|<urlset|<sitemapindex/i.test(sitemap.text)) {
-  const urlCount = (sitemap.text.match(/<loc>[^<]+<\/loc>/g) || []).length
-  if (urlCount >= 50) { ev.push(`sitemap.xml 有效 · 含 ${urlCount} 个 URL —— 覆盖完整`); score += 2.5 }
-  else if (urlCount >= 10) { ev.push(`sitemap.xml 有效 · 含 ${urlCount} 个 URL`); score += 2 }
-  else if (urlCount >= 1) { gaps.push(`sitemap.xml 只有 ${urlCount} 个 URL —— 几乎等于没写，搜索引擎能抓的页面数被卡死`); score += 0.5 }
-  else { gaps.push('sitemap.xml 是空 XML（无 <loc> 条目）'); score += 0.5 }
-} else { unv += 2; manual.push('sitemap.xml 不存在或不是有效 XML —— 这 2 分已从满分中剔除') }
+    // URL 数量不能证明覆盖率或收录；单页网站只列一个 URL 也可能正确。
+    // 此处仅识别常见 sitemap 标记，不声称完整解析或验证 XML。
+    if (sitemap.ok && /<(?:urlset|sitemapindex)\b/i.test(sitemap.text)) {
+      const urlCount = (sitemap.text.match(/<loc>[^<]+<\/loc>/gi) || []).length
+      if (urlCount > 0) {
+        ev.push(`sitemap.xml 含 sitemap 标记及 ${urlCount} 个 loc 条目`)
+        score += 2.5
+        manual.push('sitemap 完整性、XML 有效性与实际收录状态需另行核实')
+      } else {
+        gaps.push('sitemap.xml 未检测到 loc 条目，需检查格式或内容')
+        score += 0.5
+      }
+    } else { unv += 2; manual.push('未检测到 sitemap.xml 常见标记，这 2 分已从满分中剔除') }
 
     if (securityTxt.ok) { ev.push('.well-known/security.txt 存在'); score += 1 }
     else gaps.push('没有 .well-known/security.txt —— 安全研究者联系不到')
@@ -471,7 +474,7 @@ if (sitemap.ok && /<\?(xml|xml-stylesheet)|<urlset|<sitemapindex/i.test(sitemap.
 
     dims.push({
       key: 'root-files', name: '爬虫根目录', score: normalizeDim(score, unv), unverifiable: unv,
-      evidence: ev, gaps, manual: ['sitemap.xml 是否覆盖全部 URL（XML 内部判断需遍历）'],
+      evidence: ev, gaps, manual: [...manual, 'sitemap 是否覆盖需要索引的页面，需结合站点结构与站长工具核实'],
     })
   }
 

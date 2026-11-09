@@ -850,7 +850,7 @@ onMounted(() => {
       <div class="sc-trust">
         <span class="sc-trust-dot" />
         <span>共查过 <b>{{ stats.total || '—' }}</b> 次 · 平均分 <b>{{ stats.avg || '—' }}</b></span>
-        <span class="muted">·  标准与 <a href="https://github.com/webkubor/scorecard/tree/main/skills/project-maturity-audit" target="_blank" rel="noopener">project-maturity-audit</a> 同源</span>
+        <span class="muted">·  标准与 <a href="https://github.com/supercli-site/scorecard/tree/main/skills/project-maturity-audit" target="_blank" rel="noopener">project-maturity-audit</a> 同源</span>
       </div>
 
       <!-- 参照榜 —— 一个孤零零的分数没有意义，得有标尺。

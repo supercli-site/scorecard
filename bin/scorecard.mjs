@@ -50,6 +50,7 @@ function parseArgs(argv) {
   const out = { _: [] }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
+    if (a === '-h') { out.h = true; continue }
     if (a.startsWith('--')) {
       const k = a.slice(2)
       const n = argv[i + 1]
@@ -159,6 +160,7 @@ async function printGeoBrands(api) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const target = args._[0]
+  if (args.help || args.h) { console.log(HELP); return }
 
   // ---- 对比模式：--compare-a / --compare-b 必填，跳过单目标流程 ----
   if (args['compare-a'] || args['compare-b']) {
@@ -313,7 +315,7 @@ async function main() {
     return
   }
 
-  if (!target || args.help || args.h) { console.log(HELP); process.exit(target ? 0 : 1) }
+  if (!target) { console.log(HELP); process.exit(1) }
 
   // type 推断：--type 优先，否则按形态猜
   const explicitType = (args.type || '').toString().toLowerCase()
