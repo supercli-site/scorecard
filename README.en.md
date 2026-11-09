@@ -14,8 +14,12 @@
 [中文](./README.md)
 
 <p align="center">
-  <img src="https://scorecard.supercli.site/og/scorecard/webkubor/typora-Bloom-theme"
-       alt="Scorecard report example" width="640">
+  <img src="./docs/media/scorecard-v2.6.0-demo.gif" alt="Scorecard v2.6.0 demo: paste a repo → radar report → action list" width="760">
+  <br><sub>v2.6.0 recording: paste a repo, get the radar and action list in seconds (<a href="https://github.com/supercli-site/scorecard/releases/download/v2.6.0/scorecard-v2.6.0-demo.mp4">MP4</a>)</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/media/scorecard-v2.6.0-home.png" alt="Scorecard v2.6.0 home" width="760">
 </p>
 
 ## What it answers

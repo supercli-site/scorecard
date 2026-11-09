@@ -36,8 +36,12 @@ OpenSSF 那个管**供应链安全** —— 依赖有没有钉版本、token 权
 **线上版**：<https://scorecard.supercli.site>
 
 <p align="center">
-  <img src="https://scorecard.supercli.site/og/scorecard/webkubor/typora-Bloom-theme"
-       alt="Scorecard 报告示例" width="640">
+  <img src="./docs/media/scorecard-v2.6.0-demo.gif" alt="Scorecard v2.6.0 演示：输入仓库 → 雷达图报告 → 整改清单" width="760">
+  <br><sub>v2.6.0 实录：粘一个仓库，几秒出雷达图与整改清单（<a href="https://github.com/supercli-site/scorecard/releases/download/v2.6.0/scorecard-v2.6.0-demo.mp4">MP4 原片</a>）</sub>
+</p>
+
+<p align="center">
+  <img src="./docs/media/scorecard-v2.6.0-home.png" alt="Scorecard v2.6.0 首页" width="760">
 </p>
 
 ## 它回答什么问题
