@@ -35,6 +35,8 @@ Star count tells you the outcome, not the cause. Scorecard splits quality into *
 | Any webpage | `server/audit-page.js` | 9 | includes **AI identification** (llms.txt / schema.org), **crawler root** (robots / sitemap / .well-known / favicon), **WebMCP friendliness** (mcp.json / ai-plugin / openapi) |
 | GitHub profile | `server/audit-profile.js` | 7 | your homepage as a résumé: identity / profile README / **visuals** (stats cards / streak / skill icons / snake) / activity / portfolio / impact / reach |
 
+**How is this different from [OpenSSF Scorecard](https://scorecard.dev/)?** The names collide; the jobs don't. OpenSSF Scorecard measures **supply-chain security** — pinned dependencies, token permissions, signed releases — for security audits. This project measures **project maturity** — first impression, docs, release engineering — answering "is this repo ready to hand to someone else?". Some checks (CI, license) overlap; neither replaces the other. This project does no vulnerability, CVE, or SAST scanning.
+
 The output isn't just a score — it's an **actionable list**. Every item comes with evidence and a "+X points if you fix this" estimate, plus a one-click copy as a fix-it prompt you can hand to an AI.
 
 ## Compare mode
