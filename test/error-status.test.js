@@ -93,6 +93,12 @@ test('CORS：GHAM 域名放行，其它来源不回 Allow-Origin 头', async () 
   })
   expect(allowed.headers.get('access-control-allow-origin')).toBe('https://gham.webkubor.online')
 
+  // GHAM 迁到 supercli.site 后的新域名同样放行（旧域名仍在线，两者并存）
+  const migrated = await app.request('/api/health', {
+    headers: { Origin: 'https://gham.supercli.site' },
+  })
+  expect(migrated.headers.get('access-control-allow-origin')).toBe('https://gham.supercli.site')
+
   // 白名单外：不回 Allow-Origin，浏览器自己会挡
   const denied = await app.request('/api/health', {
     headers: { Origin: 'https://evil.example.com' },
