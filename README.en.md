@@ -50,6 +50,8 @@ Run two targets side-by-side, get a dimension diff + unique-gap lists — the ma
 ## Quick start
 
 ```bash
+git clone https://github.com/supercli-site/scorecard.git
+cd scorecard
 bun install          # or npm install
 bun run build        # build the front-end to dist/
 bun run server       # start the backend (default :54445), serves dist/ automatically
@@ -75,29 +77,31 @@ The token is server-side only and never sent to the front-end.
 
 ## CLI
 
+From the cloned repository, run the CLI with Node.js. It is not published as a global npm command.
+
 ```bash
 # Engines (type inferred: URL → page, pkg name → npm, owner/repo → github, @user → profile)
-scorecard supercli-site/scorecard                    # GitHub repo (9 dims)
-scorecard react --type npm                      # npm package (7 dims)
-scorecard https://example.com --type page       # webpage (9 dims)
-scorecard @webkubor --type profile              # GitHub profile as a résumé (7 dims)
+node bin/scorecard.mjs supercli-site/scorecard       # GitHub repo (9 dims)
+node bin/scorecard.mjs react --type npm              # npm package (7 dims)
+node bin/scorecard.mjs https://example.com --type page  # webpage (9 dims)
+node bin/scorecard.mjs @webkubor --type profile     # GitHub profile (7 dims)
 
 # Side-by-side compare of two same-type targets
-scorecard --compare-a https://test.example.com \
-          --compare-b https://example.com \
-          --type page
+node bin/scorecard.mjs --compare-a https://test.example.com \
+                       --compare-b https://example.com \
+                       --type page
 
 # Markdown report (hand straight to an AI)
-scorecard supercli-site/scorecard --md > report.md
+node bin/scorecard.mjs supercli-site/scorecard --md > report.md
 
 # CI gate: fail if score below threshold
-scorecard react --type npm --min 6
+node bin/scorecard.mjs react --type npm --min 6
 
 # Skip the 30-minute cache
-scorecard supercli-site/scorecard --fresh
+node bin/scorecard.mjs supercli-site/scorecard --fresh
 ```
 
-The CLI just shells out to the HTTP API — agents pick this up as their default path.
+The CLI sends requests to `https://scorecard.supercli.site` by default. To use a self-hosted server, pass `--api http://127.0.0.1:54445` or set `SCORECARD_API` to its address.
 
 ## PR maturity checks
 
