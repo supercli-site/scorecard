@@ -52,7 +52,7 @@ const card = {
   template: 'green',
   markdown,
   buttons: [
-    { text: 'Release 说明', url: `https://github.com/webkubor/scorecard/releases/tag/v${version}`, type: 'primary' },
+    { text: 'Release 说明', url: `https://github.com/supercli-site/scorecard/releases/tag/v${version}`, type: 'primary' },
     { text: '在线体验', url: SITE },
   ],
 }
