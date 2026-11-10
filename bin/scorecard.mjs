@@ -75,6 +75,7 @@ scorecard — 开源项目质检（GitHub / npm / 网页 / GitHub 首页 / GEO �
                                              # @user / github.com/<user> 形态可省 --type
   scorecard geo --brand <名> --q <问题> ...  # GEO：品牌在 AI 答案里的可见度
   scorecard geo-track <子命令> ...           # 本地 GEO 检索基线：固定查询、基线、窗口复测（见 geo-track --help）
+  scorecard geo-dashboard [serve|export]     # 本地 GEO 看板：只读查看 track / 基线 / 整改 / 快照，仅本机
 
 选项:
   --type <类型>   入口类型：github | npm | page | profile（缺省按 <arg> 形式推断）
@@ -165,6 +166,11 @@ async function main() {
   if (target === 'geo-track') {
     const { runGeoTrack } = await import('./geo-track.mjs')
     return runGeoTrack(args._.slice(1), args)
+  }
+  // 本地 GEO 看板：只读、只绑回环地址，不挂到线上实例
+  if (target === 'geo-dashboard') {
+    const { runGeoDashboard } = await import('./geo-dashboard.mjs')
+    return runGeoDashboard(args._.slice(1), args)
   }
   if (args.help || args.h) { console.log(HELP); return }
 
