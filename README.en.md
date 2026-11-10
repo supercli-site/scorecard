@@ -39,6 +39,20 @@ Star count tells you the outcome, not the cause. Scorecard splits quality into *
 
 The output isn't just a score — it's an **actionable list**. Every item comes with evidence and a "+X points if you fix this" estimate, plus a one-click copy as a fix-it prompt you can hand to an AI.
 
+### Search baseline tracking (geo-track, local)
+
+`geo` asks whether AI answers mention you. `geo-track` asks something else: **for a fixed set of questions, do the sources a search tool returns include your site, repository or package page**, and how does that look in a retest window after fixes. The two are reported separately.
+
+```bash
+scorecard geo-track init track.json                  # freeze the queries
+scorecard geo-track capture <id> --kind baseline
+scorecard geo-track log <id> --type remediation --entry A --what "add install guide"
+scorecard geo-track capture <id> --kind retest       # only inside track.window; otherwise --kind preview
+scorecard geo-track report <id> --out report.md      # failed queries are listed, never counted as misses
+```
+
+Runs locally with the `magpie web_search` tool; data stays in `~/.scorecard/geo` (`SCORECARD_GEO_DIR`). Snapshots are never overwritten and are hash-checked before comparison. A URL in a search response does not prove ranking, indexing, installs or causation. Part of the free self-hosted edition.
+
 ## Compare mode
 
 Run two targets side-by-side, get a dimension diff + unique-gap lists — the main use case is **test env vs production**:
