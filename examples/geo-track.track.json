@@ -1,0 +1,25 @@
+{
+  "id": "my-project",
+  "name": "My Project 检索基线",
+  "window": { "start": "2026-12-01", "end": "2026-12-07", "timezone": "Asia/Shanghai" },
+  "entries": [
+    {
+      "id": "MP",
+      "name": "My Project",
+      "sources": [
+        { "prefix": "my-project.example.com", "kind": "owned_site" },
+        { "prefix": "github.com/your-name/my-project", "kind": "owned_repository" },
+        { "prefix": "www.npmjs.com/package/my-project", "kind": "owned_package" }
+      ]
+    }
+  ],
+  "queries": [
+    { "id": "MP-B1", "entry": "MP", "kind": "brand", "query": "my-project" },
+    { "id": "MP-B2", "entry": "MP", "kind": "brand", "query": "my-project 安装" },
+    { "id": "MP-Q1-ZH", "entry": "MP", "kind": "category", "query": "有什么好用的 X 工具" },
+    { "id": "MP-Q1-EN", "entry": "MP", "kind": "category", "query": "best tool for X" }
+  ],
+  "supplementary": [
+    { "id": "MP-S1", "entry": "MP", "query": "my-project.example.com" }
+  ]
+}
