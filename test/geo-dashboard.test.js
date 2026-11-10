@@ -171,6 +171,33 @@ test('track 顶层 notes 作为「非实时」历史备注展示并转义；没�
   expect(renderTrack(buildTrackModel('demo', { env: e2 }))).not.toContain('历史备注')
 })
 
+test('归类规则变更：汇总单列「规则变更，不可比较」，每条查询恰好计入一个桶，不会呈现全零', async () => {
+  // 回归：#28 给 compare 加了 rules-changed，看板汇总曾没计入，页面显示全是 0，像「没有变化」。
+  const e = env()
+  initTrack(TRACK, e)
+  const a = adapter({ 'alpha plugin': reply('only https://other.site/x'), 'best plugin for x': reply('see https://other.site/y') })
+  await capture('demo', { kind: 'baseline', env: e, now: new Date('2026-11-08T04:00:00Z'), adapter: a })
+  // 采集后改 sources（不影响冻结哈希）—— 下一次采集冻结的是另一套规则
+  const file = join(trackDir('demo', e), 'track.json')
+  const t = JSON.parse(readFileSync(file, 'utf8'))
+  t.entries[0].sources.push({ prefix: 'other.site', kind: 'owned_site' })
+  writeFileSync(file, JSON.stringify(t, null, 2))
+  await capture('demo', { kind: 'preview', env: e, now: new Date('2026-11-09T04:00:00Z'), adapter: a })
+
+  const c = buildTrackModel('demo', { env: e, now: new Date('2026-11-09T04:00:00Z') }).comparison
+  expect(c.available).toBe(true)
+  expect(c.counts.rulesChanged).toBe(2)
+  expect(c.rulesChangedIds).toEqual(['A-B1', 'A-Q1'])
+  const { nowHit, nowMiss, stillHit, stillMiss, unavailable, rulesChanged, kindChanged, total } = c.counts
+  expect(nowHit + nowMiss + stillHit + stillMiss + unavailable + rulesChanged + kindChanged).toBe(total)
+  expect(nowHit + nowMiss + stillHit + stillMiss).toBe(0)
+
+  const html = handle({ method: 'GET', url: '/t/demo', host: LOCAL }, { env: e }).body
+  expect(html).toContain('规则变更，不可比较')
+  expect(html).toContain('上面的 0 不代表「没有变化」')
+  expect(html).not.toContain('<span class="ok">未中 → 命中</span>')
+})
+
 test('空数据目录：首页给出起步指引', () => {
   const e = env()
   expect(buildIndexModel({ env: e })).toEqual([])

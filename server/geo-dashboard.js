@@ -197,13 +197,28 @@ export function buildTrackModel(id, { env = process.env, now = new Date(), focus
     else if (!sameTool) comparison = { available: false, reason: `两份快照的检索工具不同（${baseline.tool} / ${latest.tool}），结果不可直接比较` }
     else {
       const diff = compare(track, baseRows, lateRows)
-      const tally = (c) => diff.filter((d) => d.change === c).length
+      // 每条查询恰好落进一个桶：口径与 reportMarkdown 一致 ——
+      // rules-changed 单列；kind-changed 在 compare 里是 unavailable，但看 before/after 单列；
+      // 不认识的 change 值一律当不可比较，绝不静默丢掉（否则汇总会全零、像「没变化」）。
+      const COMPARABLE = new Set(['now-hit', 'now-miss', 'still-hit', 'still-miss'])
+      const isKindChanged = (d) => d.before === 'kind-changed' || d.after === 'kind-changed'
+      const bucket = (d) => d.change === 'rules-changed' ? 'rulesChanged'
+        : isKindChanged(d) ? 'kindChanged'
+          : COMPARABLE.has(d.change) ? d.change : 'unavailable'
+      const ids = (b) => diff.filter((d) => bucket(d) === b).map((d) => d.id)
+      const tally = (b) => ids(b).length
       comparison = {
         available: true,
         before: baseline.name,
         after: latest.name,
         afterKind: latest.kind,
-        counts: { nowHit: tally('now-hit'), nowMiss: tally('now-miss'), stillHit: tally('still-hit'), stillMiss: tally('still-miss'), unavailable: tally('unavailable') },
+        counts: {
+          nowHit: tally('now-hit'), nowMiss: tally('now-miss'), stillHit: tally('still-hit'), stillMiss: tally('still-miss'),
+          unavailable: tally('unavailable'), rulesChanged: tally('rulesChanged'), kindChanged: tally('kindChanged'), total: diff.length,
+        },
+        rulesChangedIds: ids('rulesChanged'),
+        kindChangedIds: ids('kindChanged'),
+        rulesUnverified: diff.filter((d) => d.rulesUnverified).length,
         moved: diff.filter((d) => d.change === 'now-hit' || d.change === 'now-miss').map((d) => ({
           id: d.id, entry: d.entry, query: d.query, change: d.change,
           ownedAfter: d.ownedAfter.map((u) => ({ url: u, kindLabel: KIND_LABEL[lateRows[d.id]?.kinds[u]] || '已登记来源' })),
@@ -423,7 +438,11 @@ ${m.comparison?.available && f.name === m.baselineName ? `<p class="muted" style
   else if (!c.available) parts.push(`<div class="empty warn">${esc(c.reason)}</div>`)
   else {
     parts.push(`${c.afterKind === 'preview' ? '<div class="caveat">对照快照是 <b>preview</b>，不是正式复测，不能当作复测结果引用。</div>' : ''}
-<div class="facts"><div class="fact"><b class="ok">${c.counts.nowHit}</b><span>未中 → 命中</span></div><div class="fact"><b class="bad">${c.counts.nowMiss}</b><span>命中 → 未中</span></div><div class="fact"><b>${c.counts.stillHit}</b><span>保持命中</span></div><div class="fact"><b>${c.counts.stillMiss}</b><span>保持未中</span></div><div class="fact"><b class="warn">${c.counts.unavailable}</b><span>不可比较（采集失败或缺失）</span></div></div>`)
+<div class="facts"><div class="fact"><b class="ok">${c.counts.nowHit}</b><span>未中 → 命中</span></div><div class="fact"><b class="bad">${c.counts.nowMiss}</b><span>命中 → 未中</span></div><div class="fact"><b>${c.counts.stillHit}</b><span>保持命中</span></div><div class="fact"><b>${c.counts.stillMiss}</b><span>保持未中</span></div><div class="fact"><b class="warn">${c.counts.unavailable}</b><span>不可比较（采集失败或缺失）</span></div>${c.counts.rulesChanged ? `<div class="fact"><b class="warn">${c.counts.rulesChanged}</b><span>规则变更，不可比较</span></div>` : ''}${c.counts.kindChanged ? `<div class="fact"><b class="warn">${c.counts.kindChanged}</b><span>题型已变，不可比较</span></div>` : ''}</div>`)
+    const comparable = c.counts.nowHit + c.counts.nowMiss + c.counts.stillHit + c.counts.stillMiss
+    if (c.counts.rulesChanged) parts.push(`<div class="caveat"><b>规则变更，不可比较：</b>${c.counts.rulesChanged}/${c.counts.total} 条查询在两份快照采集时用的归类规则（sources）不同，命中口径不一致，未计入上面的命中变化${comparable ? '' : '；本次没有任何可比较的查询，上面的 0 不代表「没有变化」'}。要比较请用同一套 sources 重采或新建 track：${c.rulesChangedIds.map((id) => `<code>${esc(id)}</code>`).join(' ')}</div>`)
+    if (c.counts.kindChanged) parts.push(`<div class="caveat"><b>题型已变，不可比较：</b>采集时的 brand/category 与当前 track.json 不同：${c.kindChangedIds.map((id) => `<code>${esc(id)}</code>`).join(' ')}</div>`)
+    if (c.rulesUnverified) parts.push(`<div class="caveat">${c.rulesUnverified} 条查询有一侧是旧版本快照（没有冻结归类规则），已按当前 track.json 的 sources 重算；若采集后改过 sources，前后<b>不保证可比</b>。</div>`)
     parts.push(c.moved.length ? `<table><thead><tr><th>查询</th><th>变化</th><th>对照快照里的已登记来源</th></tr></thead><tbody>${c.moved.map((d) => `<tr><td><code>${esc(d.id)}</code> ${esc(d.query)}</td><td>${d.change === 'now-hit' ? '<span class="ok">未中 → 命中</span>' : '<span class="bad">命中 → 未中</span>'}</td><td>${d.ownedAfter.map((o) => extLink(o.url)).join('<br>') || '<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">没有查询发生命中变化。</div>')
   }
 
