@@ -160,6 +160,17 @@ test('窄屏不横向溢出：表格单元格允许长链接 / code 在任意位
   expect(rule).toContain('overflow-wrap:anywhere')
 })
 
+test('track 顶层 notes 作为「非实时」历史备注展示并转义；没有 notes 不出该区块', () => {
+  const e = env()
+  initTrack({ ...TRACK, notes: ['2026-11-09 GSC 观察：请求是否受理未知 <b>x</b>', 42] }, e)
+  const html = renderTrack(buildTrackModel('demo', { env: e }))
+  expect(html).toContain('历史备注 <span class="tag">非实时</span>')
+  expect(html).toContain('请求是否受理未知 &lt;b&gt;x&lt;/b&gt;')
+  const e2 = env()
+  initTrack(TRACK, e2)
+  expect(renderTrack(buildTrackModel('demo', { env: e2 }))).not.toContain('历史备注')
+})
+
 test('空数据目录：首页给出起步指引', () => {
   const e = env()
   expect(buildIndexModel({ env: e })).toEqual([])

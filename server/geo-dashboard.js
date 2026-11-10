@@ -250,6 +250,8 @@ export function buildTrackModel(id, { env = process.env, now = new Date(), focus
     entries,
     remediation: (track.remediation || []).map((r) => ({ date: r.date || '', entry: r.entry || '', what: r.what || '', url: r.url || '', state: r.state || '' })),
     webmaster: webmasterLinks(track),
+    // track 顶层 notes：人工记下的历史说明（字符串或字符串数组），原样展示、不解释成实时状态
+    notes: (Array.isArray(track.notes) ? track.notes : [track.notes]).filter((n) => typeof n === 'string' && n.trim()).map((n) => n.slice(0, 2000)),
     installEvidence: (track.installEvidence || []).map((r) => ({ date: r.date || '', entry: r.entry || '', what: r.note || r.what || '', url: r.url || '', source: r.source === 'volunteer' ? 'volunteer' : 'isolated' })),
   }
 }
@@ -387,6 +389,9 @@ export function renderTrack(m) {
 <div class="fact"><b class="${m.retest.allowed ? 'ok' : 'warn'}">${m.retest.allowed ? '可正式复测' : '暂不可正式复测'}</b><span>${esc(m.retest.reason)}</span></div>
 <div class="fact"><b>${m.remediation.length}</b><span>条整改 · ${m.installEvidence.length} 条安装证据</span></div>
 </div>`)
+
+  // 历史备注：看板不拉取任何实时状态，这里只是人工记录，必须带「非实时」标识
+  if (m.notes.length) parts.push(`<h2 id="notes">历史备注 <span class="tag">非实时</span></h2><p class="muted">来自 track.json 顶层 <code>notes</code>，是记录当时的人工观察；当前状态以登录站长工具后实际显示为准。</p><div class="card">${m.notes.map((n) => `<p style="margin:4px 0">${linkify(n)}</p>`).join('')}</div>`)
 
   // 站长工具入口（放在顶部：用户要求可直达）
   parts.push(`<h2 id=\"webmaster\">站长工具入口</h2><p class=\"muted\">只是入口链接：需登录有该资源权限的账号。看板不登录、不调用站长工具，不能证明拥有权限，也不能证明已收录；收录状态以登录后站内实际显示为准。</p>
