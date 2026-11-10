@@ -261,7 +261,7 @@ scorecard geo-track capture <id> --kind retest            # 只允许在 track.w
 scorecard geo-track report <id> --out report.md           # 有限比较；失败查询单列，不算零命中
 ```
 
-- 纯本机执行，默认调用本机 `magpie web_search`；数据在 `~/.scorecard/geo`（`SCORECARD_GEO_DIR` 可改），不进仓库、不上传。
+- 命令在本机运行，默认调用本机 `magpie web_search`。快照与报告默认保存在本机 `~/.scorecard/geo`（`SCORECARD_GEO_DIR` 可改），不进仓库；采集时查询会发送给配置的检索服务（及其后端），按该服务的政策处理。
 - 快照只新建不覆盖，采完写 sha256 清单，比较前先校验。采集中断留下的残目录（没有清单）不算快照，不会挡住重采。
 - 每份快照冻结采集当时的 `sources` 归类规则：事后改 sources 不会倒改旧快照的结论；前后快照规则不同的题单列为「归类规则已变，不可比较」。旧版本采集、没有规则快照的快照会按当前规则重算，报告明确标注「不保证可比」。
 - 原始响应丢失的旧基线可用 `import-derived` 导入，报告会永久标注「原始响应缺失」。CSV 里没有来源行的查询记为缺失，不算零命中；若某题确实采到但零来源，用 `--coverage <file>`（`query_id` 列或每行一个 id）显式登记覆盖。
