@@ -53,6 +53,8 @@ scorecard geo-track report <id> --out report.md      # failed queries are listed
 
 Runs locally with the `magpie web_search` tool; data stays in `~/.scorecard/geo` (`SCORECARD_GEO_DIR`). Snapshots are never overwritten and are hash-checked before comparison. A URL in a search response does not prove ranking, indexing, installs or causation. Part of the free self-hosted edition.
 
+`scorecard geo-dashboard` opens a read-only local dashboard (tracks, baseline, remediation, install evidence, snapshots) at `http://127.0.0.1:54447/`; `scorecard geo-dashboard export <id> --out geo.html` writes a self-contained file instead. It binds to loopback only (non-loopback hosts and Host headers are refused), ships no JavaScript or external assets, and never shows raw search responses, unregistered third-party URLs or local paths.
+
 ## Compare mode
 
 Run two targets side-by-side, get a dimension diff + unique-gap lists — the main use case is **test env vs production**:

@@ -2,6 +2,12 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## 未发布
+
+### 新增
+
+- `feat(geo)` — **本地 GEO 看板 `scorecard geo-dashboard`**：一屏查看 track、基线、整改、安装证据与快照。只读消费 geo-track 数据（不改采集口径），只绑回环地址并校验 Host 头，页面零 JS / 零外部资源，不展示原始响应、未登记第三方 URL 与本机路径；`export` 可导出自包含 HTML。
+
 ## 2.6.0 — 2026-11-09
 
 ### 新增
