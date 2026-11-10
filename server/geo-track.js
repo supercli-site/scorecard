@@ -76,6 +76,27 @@ export function queriesDigest(queries) {
   return sha256(Buffer.from(JSON.stringify(canonical)))
 }
 
+/**
+ * 题型冻结（v2）：brand / category 决定分组统计，改了题型前后分组就不是同一口径。
+ * 为兼容已有 track，不改 queriesDigest（改了旧哈希全部失效）；新 track 另存 kindsSha256。
+ * 旧 track 没有 kindsSha256 = 旧格式：题型改动拦不住，报告里明确标注。
+ */
+function kindsDigest(queries) {
+  return sha256(Buffer.from(JSON.stringify(queries.map((q) => ({ id: q.id, kind: q.kind || 'category' })))))
+}
+
+function queryKindMap(queries) {
+  return Object.fromEntries(queries.map((q) => [q.id, q.kind || 'category']))
+}
+
+/** YYYY-MM-DD 且是真实日历日期（2026-02-31 不算）。 */
+function isRealDate(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return false
+  const [y, m, d] = s.split('-').map(Number)
+  const t = new Date(Date.UTC(y, m - 1, d))
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d
+}
+
 // 查询 id 会直接当文件名用（raw/<id>.json、metadata/<id>.json），
 // 所以只允许「字母数字下划线点连字符」——不许出现 / 或 \ 或 ..，
 // 否则一个 id 就能把采集结果写到快照目录外面去。
@@ -114,16 +135,19 @@ export function validateTrack(track) {
   // 补充查询单独校验：它和固定题是两套东西，编号不能重名（否则补充采集会盖掉
   // 固定题的原始响应），也不能引用不存在的 entry。
   const supplement = Array.isArray(track.supplementary) ? track.supplementary : []
+  const sids = new Set()
   for (const q of supplement) {
     const idErr = queryIdError(q)
     if (idErr) errors.push(`补充查询：${idErr}`)
     if (qids.has(q?.id)) errors.push(`补充查询 id 与固定题重名：${q?.id}（补充题用独立编号，如 X-S1）`)
+    if (sids.has(q?.id)) errors.push(`补充查询 id 重复：${q?.id}（落盘会撞名）`)
+    sids.add(q?.id)
     if (!entryIds.has(q?.entry)) errors.push(`补充查询 ${q?.id} 的 entry 不存在：${q?.entry}`)
     if (!String(q?.query || '').trim()) errors.push(`补充查询 ${q?.id} 文本为空`)
   }
   const w = track.window
-  if (w && !(/^\d{4}-\d{2}-\d{2}$/.test(w.start || '') && /^\d{4}-\d{2}-\d{2}$/.test(w.end || '') && w.start <= w.end)) {
-    errors.push('window 需要 start ≤ end，格式 YYYY-MM-DD')
+  if (w && !(isRealDate(w.start) && isRealDate(w.end) && w.start <= w.end)) {
+    errors.push('window 需要 start ≤ end，格式 YYYY-MM-DD，且是真实日期')
   }
   return errors
 }
@@ -157,7 +181,7 @@ export function initTrack(track, env = process.env) {
   mkdirSync(join(dir, 'snapshots'), { recursive: true })
   const stored = {
     ...track,
-    frozen: { queriesSha256: queriesDigest(track.queries), frozenAt: new Date().toISOString() },
+    frozen: { queriesSha256: queriesDigest(track.queries), kindsSha256: kindsDigest(track.queries), frozenAt: new Date().toISOString() },
     remediation: track.remediation || [],
     installEvidence: track.installEvidence || [],
   }
@@ -181,6 +205,9 @@ export function captureGate(track, kind, { now = new Date(), snapshots = [] } = 
   if (queriesDigest(track.queries) !== track.frozen?.queriesSha256) {
     throw new Error('查询与冻结时的哈希不一致：冻结后不能改查询。需要新问题请新建 track，或写进 supplementary')
   }
+  if (track.frozen?.kindsSha256 && kindsDigest(track.queries) !== track.frozen.kindsSha256) {
+    throw new Error('题型（brand/category）与冻结时不一致：改题型会改变分组统计。需要请新建 track')
+  }
   if (kind === 'baseline' && snapshots.some((s) => s.kind === 'baseline' || s.kind === 'derived-recovered')) {
     throw new Error('这个 track 已有基线；之后的采集用 retest 或 preview')
   }
@@ -188,8 +215,8 @@ export function captureGate(track, kind, { now = new Date(), snapshots = [] } = 
     if (!snapshots.some((s) => s.kind === 'baseline' || s.kind === 'derived-recovered')) throw new Error('还没有基线，不能做复测')
     const w = track.window
     if (!w) throw new Error('track 没有登记复测窗口（window），正式复测无从判断；先跑 preview')
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(w.start || '') || !/^\d{4}-\d{2}-\d{2}$/.test(w.end || '')) {
-      throw new Error(`window 的 start / end 需要 YYYY-MM-DD 格式，收到：${w.start} / ${w.end}`)
+    if (!isRealDate(w.start) || !isRealDate(w.end)) {
+      throw new Error(`window 的 start / end 需要 YYYY-MM-DD 格式的真实日期，收到：${w.start} / ${w.end}`)
     }
     const tz = w.timezone || 'UTC'
     const today = dateIn(tz, now)
@@ -374,6 +401,7 @@ export async function capture(id, { kind, adapter = magpieAdapter, count = 8, co
     countRequested: count,
     backend: 'unknown',
     queriesSha256: track.frozen.queriesSha256,
+    queryKinds: queryKindMap(track.queries),
     classification: classificationRules(track.entries),
     interpretation: CAVEAT,
   }
@@ -461,7 +489,7 @@ export function importDerived(id, { sources, note = '', now = new Date(), env = 
   mkdirSync(join(dest, 'derived'), { recursive: true })
   const context = {
     kind: 'derived-recovered', trackId: id, importedAtUtc: new Date().toISOString(),
-    queriesSha256: track.frozen.queriesSha256, rawMissing: true, note,
+    queriesSha256: track.frozen.queriesSha256, queryKinds: queryKindMap(track.queries), rawMissing: true, note,
     interpretation: `${CAVEAT} 该基线原始响应缺失，只能做有限比较。`,
   }
   writeFileSync(join(dest, 'snapshot.json'), JSON.stringify(context, null, 2) + '\n', { flag: 'wx' })
@@ -476,6 +504,18 @@ export function importDerived(id, { sources, note = '', now = new Date(), env = 
 
 /** 把一份快照读成「每个查询：状态 + URL + 归类」。先校验完整性。 */
 export function readSnapshot(track, snap) {
+  const rows = readSnapshotRows(track, snap)
+  // 快照记下了采集当时的题型：与当前 track 不同 → 这题分组口径已变，不参与统计与比较
+  const kinds = snap.queryKinds
+  if (kinds) {
+    for (const q of track.queries) {
+      if (kinds[q.id] && kinds[q.id] !== (q.kind || 'category')) rows[q.id] = { ...rows[q.id], status: 'kind-changed', hit: null }
+    }
+  }
+  return rows
+}
+
+function readSnapshotRows(track, snap) {
   verifySnapshot(snap.dir)
   if (snap.queriesSha256 !== track.frozen.queriesSha256) throw new Error(`快照 ${snap.name} 与当前冻结查询不匹配`)
   const entryOf = Object.fromEntries(track.entries.map((e) => [e.id, e]))
@@ -551,6 +591,13 @@ export function reportMarkdown(track, { before, after, diff, beforeSummary, afte
   const lines = [`# GEO 检索基线：${track.name || track.id}`, '', `> ${CAVEAT}`, '']
   if (before?.kind === 'derived-recovered') lines.push('> 基线为派生恢复数据（原始响应缺失），以下只是有限比较。', '')
   if (after?.kind === 'preview') lines.push('> 本次是 **preview**，不是正式复测，不能当作复测结果引用。', '')
+  if (!track.frozen?.kindsSha256) {
+    lines.push('> ⚠ 该 track 为旧格式冻结（哈希不含题型 brand/category）：改题型不会被拦截。' +
+      '快照若记录了采集时题型，与当前不一致的题会单列为不可比较；没有记录的旧快照，品牌/品类分组**不保证**与采集时一致。', '')
+  }
+  for (const s of [before, after]) {
+    if (s && !s.queryKinds) lines.push(`> ⚠ 快照 ${s.name} 未记录采集时题型（旧格式），分组统计按当前 track.json 计算。`, '')
+  }
   for (const s of [before, after]) {
     if (s && s.kind !== 'derived-recovered' && !s.classification) {
       lines.push(`> ⚠ 快照 ${s.name} 由旧版本采集，没有冻结归类规则，已按当前 track.json 的 sources 重算；若采集后改过 sources，结论与当时不一致，前后**不保证可比**。`, '')
@@ -566,11 +613,14 @@ export function reportMarkdown(track, { before, after, diff, beforeSummary, afte
   }
   if (diff) {
     const moved = diff.filter((d) => d.change === 'now-hit' || d.change === 'now-miss')
-    const unavailable = diff.filter((d) => d.change === 'unavailable')
+    const isKindChanged = (d) => d.before === 'kind-changed' || d.after === 'kind-changed'
+    const kindChanged = diff.filter(isKindChanged)
+    const unavailable = diff.filter((d) => d.change === 'unavailable' && !isKindChanged(d))
     lines.push('', '## 变化的查询', '')
     if (!moved.length) lines.push('无。')
     for (const d of moved) lines.push(`- \`${d.id}\` ${d.change === 'now-hit' ? '未中 → 命中' : '命中 → 未中'}：${d.query}${d.ownedAfter.length ? `（${d.ownedAfter.join('，')}）` : ''}`)
     if (unavailable.length) lines.push('', `## 不可比较（${unavailable.length}）`, '', '采集失败或缺失，不计为零命中：' + unavailable.map((d) => `\`${d.id}\``).join('、'))
+    if (kindChanged.length) lines.push('', `## 题型已变，不可比较（${kindChanged.length}）`, '', '采集时的 brand/category 与当前 track.json 不同，分组口径不一致：' + kindChanged.map((d) => `\`${d.id}\``).join('、'))
     const rulesChanged = diff.filter((d) => d.change === 'rules-changed')
     if (rulesChanged.length) lines.push('', `## 归类规则已变，不可比较（${rulesChanged.length}）`, '', '两份快照采集时的 sources 不同，命中口径不一致；要比较请新建 track 或用同一套 sources 重采：' + rulesChanged.map((d) => `\`${d.id}\``).join('、'))
   }

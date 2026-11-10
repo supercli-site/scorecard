@@ -104,6 +104,7 @@ export async function runGeoTrack(argv, args) {
     const snaps = listSnapshots(id)
     const intact = queriesDigest(track.queries) === track.frozen.queriesSha256
     console.log(`${track.name || track.id}  ·  ${track.entries.length} 个入口 · ${track.queries.length} 条查询 · 冻结${intact ? '有效' : '已被改动 ❌'}`)
+    if (!track.frozen.kindsSha256) console.log('⚠ 旧格式冻结：哈希不含题型（brand/category），改题型不会被拦截；报告会标注')
     console.log(`复测窗口：${track.window ? `${track.window.start}..${track.window.end}（${track.window.timezone || 'UTC'}）` : '未登记'}`)
     console.log(`快照（${snaps.length}）：`)
     for (const s of snaps) console.log(`  · ${s.name}  [${s.kind}]`)

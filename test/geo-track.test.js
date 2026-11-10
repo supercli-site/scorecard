@@ -10,6 +10,7 @@
 //   ⑦ 采集中断留下的残目录被当成基线 → 这个 track 永远做不了正式复测
 //   ⑧ 查询 id 能带路径分隔符 → 采集结果写到快照目录外面
 //   ⑨ 补充题与固定题共用编号 → 补充采集盖掉固定题的原始响应
+//   ⑪ 题型（brand/category）冻结：新 track 拦截改动；旧格式 track 不改哈希、明确标注
 //   ⑩ 事后改 sources 倒改历史快照的命中结论 → 新快照冻结归类规则，旧快照明确提示
 import { test, expect } from 'bun:test'
 import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, existsSync, rmSync } from 'node:fs'
@@ -398,4 +399,55 @@ test('CLI --concurrency 0 直接报错，不被吞成默认值', async () => {
   } finally {
     if (prev === undefined) delete process.env.SCORECARD_GEO_DIR; else process.env.SCORECARD_GEO_DIR = prev
   }
+})
+
+// ---------- 补充题重复 id、真实日期 ----------
+
+test('两个补充题同 id 直接拒绝', () => {
+  const t = { ...TRACK, supplementary: [{ id: 'A-S1', entry: 'A', query: 'x' }, { id: 'A-S1', entry: 'A', query: 'y' }] }
+  expect(validateTrack(t).some((e) => /补充查询 id 重复/.test(e))).toBe(true)
+})
+
+test('窗口日期必须是真实日历日期', () => {
+  expect(validateTrack({ ...TRACK, window: { start: '2026-02-31', end: '2026-03-05' } }).some((e) => /真实日期/.test(e))).toBe(true)
+  expect(validateTrack({ ...TRACK, window: { start: '2028-02-29', end: '2028-03-05' } })).toEqual([])
+  const t = { ...TRACK, window: { start: '2026-11-15', end: '2026-11-31', timezone: 'UTC' }, frozen: loadTrackFrozen() }
+  expect(() => captureGate(t, 'retest', { now: IN_WINDOW, snapshots: [{ kind: 'baseline' }] })).toThrow(/真实日期/)
+})
+
+// ---------- ⑪ 题型冻结 ----------
+
+const setKind = (e, qid, kind, dropKindsHash = false) => {
+  const file = join(trackDir('demo', e), 'track.json')
+  const t = JSON.parse(readFileSync(file, 'utf8'))
+  t.queries.find((q) => q.id === qid).kind = kind
+  if (dropKindsHash) delete t.frozen.kindsSha256
+  writeFileSync(file, JSON.stringify(t, null, 2))
+}
+
+test('新 track 冻结题型：改 brand/category 后拒绝采集；queriesSha256 保持旧算法', async () => {
+  const e = env()
+  const stored = initTrack(TRACK, e)
+  expect(stored.frozen.kindsSha256).toMatch(/^[0-9a-f]{64}$/)
+  setKind(e, 'A-B1', 'category')
+  await expect(capture('demo', { kind: 'baseline', env: e, adapter: adapter({}) })).rejects.toThrow(/题型/)
+})
+
+test('旧格式 track（无 kindsSha256）照常可用，不被改写；题型改动后快照单列不可比较，报告标注旧格式', async () => {
+  const e = env()
+  initTrack(TRACK, e)
+  // 模拟旧版本 init：去掉 kindsSha256
+  setKind(e, 'A-B1', 'brand', true)
+  const before = readFileSync(join(trackDir('demo', e), 'track.json'), 'utf8')
+  await capture('demo', { kind: 'baseline', env: e, adapter: adapter({ 'alpha plugin': reply('https://alpha.example.com') }) })
+  expect(readFileSync(join(trackDir('demo', e), 'track.json'), 'utf8')).toBe(before)
+  setKind(e, 'A-B1', 'category')
+  const track = loadTrack('demo', e)
+  const [snap] = listSnapshots('demo', e)
+  const rows = readSnapshot(track, snap)
+  expect(rows['A-B1']).toMatchObject({ status: 'kind-changed', hit: null })
+  const diff = compare(track, rows, rows)
+  const md = reportMarkdown(track, { before: snap, after: snap, diff, beforeSummary: summarize(track, rows), afterSummary: summarize(track, rows) })
+  expect(md).toContain('旧格式冻结')
+  expect(md).toContain('题型已变')
 })
