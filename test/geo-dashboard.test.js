@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import { initTrack, capture, importDerived, listSnapshots, trackDir } from '../server/geo-track.js'
 import {
   handle, buildTrackModel, buildIndexModel, renderTrack, isLoopbackHost, isLoopbackHostHeader,
-  startDashboardServer, CSP,
+  startDashboardServer, CSP, webmasterLinks,
 } from '../server/geo-dashboard.js'
 
 const TRACK = {
@@ -131,6 +131,24 @@ test('派生恢复基线标明原始响应缺失；未知 track / 快照返回 4
   expect(handle({ method: 'GET', url: '/t/nope', host: LOCAL }, { env: e }).status).toBe(404)
   expect(handle({ method: 'GET', url: '/t/demo?snapshot=x', host: LOCAL }, { env: e }).status).toBe(404)
   expect(handle({ method: 'GET', url: '/t/../../etc', host: LOCAL }, { env: e }).status).toBe(404)
+})
+
+test('站长工具入口：项目级链接优先，缺哪家补通用入口；危险链接丢弃，不声称已验证', () => {
+  expect(webmasterLinks({}).map((w) => [w.provider, w.configured])).toEqual([['Google Search Console', false], ['Bing Webmaster Tools', false]])
+  const e = env()
+  initTrack({ ...TRACK, webmasterTools: [
+    { name: 'GSC · <b>alpha</b>', url: 'https://search.google.com/search-console?resource_id=sc-domain%3Aalpha.example.com', note: '需登录' },
+    { name: 'evil', url: 'javascript:alert(1)' },
+  ] }, e)
+  const m = buildTrackModel('demo', { env: e })
+  expect(m.webmaster.map((w) => [w.provider, w.configured])).toEqual([['Google Search Console', true], ['Bing Webmaster Tools', false]])
+  const html = renderTrack(m)
+  expect(html).toContain('href="https://search.google.com/search-console?resource_id=sc-domain%3Aalpha.example.com"')
+  expect(html).toContain('GSC · &lt;b&gt;alpha&lt;/b&gt;')
+  expect(html).toContain('href="https://www.bing.com/webmasters"')
+  expect(html).not.toContain('javascript:')
+  expect(html).toContain('不能证明拥有权限，也不能证明已收录')
+  expect(html).not.toMatch(/已验证|已收录[^；]/)
 })
 
 test('空数据目录：首页给出起步指引', () => {

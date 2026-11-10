@@ -86,6 +86,29 @@ function retestGate(track, snapshots, now) {
   catch (error) { return { allowed: false, reason: error.message } }
 }
 
+// 站长工具入口：用户明确要求能一键直达。项目级链接写在 track.json 顶层
+// webmasterTools: [{ name, url, note }]（不影响冻结哈希）；没配哪家就给那家的通用首页。
+// 这些只是链接 —— 看板不登录、不调站长工具 API，不能据此声称有权限或已收录。
+const WEBMASTER_PROVIDERS = [
+  { name: 'Google Search Console', url: 'https://search.google.com/search-console', host: 'search.google.com' },
+  { name: 'Bing Webmaster Tools', url: 'https://www.bing.com/webmasters', host: 'www.bing.com', path: '/webmasters' },
+]
+const providerOf = (href) => {
+  const u = new URL(href)
+  return WEBMASTER_PROVIDERS.find((p) => u.hostname === p.host && (!p.path || u.pathname.startsWith(p.path))) || null
+}
+
+export function webmasterLinks(track) {
+  const configured = (Array.isArray(track.webmasterTools) ? track.webmasterTools : []).flatMap((t) => {
+    const href = t && typeof t.url === 'string' ? safeHref(t.url) : null
+    if (!href) return [] // 非 http(s)（如 javascript:）直接丢弃
+    return [{ name: String(t.name || href).slice(0, 120), url: href, note: String(t.note || t.purpose || '').slice(0, 300), provider: providerOf(href)?.name || null, configured: true }]
+  })
+  const fallbacks = WEBMASTER_PROVIDERS.filter((p) => !configured.some((c) => c.provider === p.name))
+    .map((p) => ({ name: p.name, url: p.url, note: '未配置项目级资源，打开的是通用首页', provider: p.name, configured: false }))
+  return [...configured, ...fallbacks]
+}
+
 function readRows(track, snap) {
   try { return { rows: readSnapshot(track, snap), error: null } }
   catch (error) { return { rows: null, error: error.message } }
@@ -226,6 +249,7 @@ export function buildTrackModel(id, { env = process.env, now = new Date(), focus
     comparison,
     entries,
     remediation: (track.remediation || []).map((r) => ({ date: r.date || '', entry: r.entry || '', what: r.what || '', url: r.url || '', state: r.state || '' })),
+    webmaster: webmasterLinks(track),
     installEvidence: (track.installEvidence || []).map((r) => ({ date: r.date || '', entry: r.entry || '', what: r.note || r.what || '', url: r.url || '', source: r.source === 'volunteer' ? 'volunteer' : 'isolated' })),
   }
 }
@@ -363,6 +387,11 @@ export function renderTrack(m) {
 <div class="fact"><b class="${m.retest.allowed ? 'ok' : 'warn'}">${m.retest.allowed ? '可正式复测' : '暂不可正式复测'}</b><span>${esc(m.retest.reason)}</span></div>
 <div class="fact"><b>${m.remediation.length}</b><span>条整改 · ${m.installEvidence.length} 条安装证据</span></div>
 </div>`)
+
+  // 站长工具入口（放在顶部：用户要求可直达）
+  parts.push(`<h2 id=\"webmaster\">站长工具入口</h2><p class=\"muted\">只是入口链接：需登录有该资源权限的账号。看板不登录、不调用站长工具，不能证明拥有权限，也不能证明已收录；收录状态以登录后站内实际显示为准。</p>
+<div class=\"cards\">${m.webmaster.map((w) => `<section class=\"card\"><h3>${extLink(w.url, w.name)}</h3><p class=\"muted\" style=\"margin:4px 0 0;font-size:12px\">${w.configured ? '<span class=\"tag base\">项目级链接</span>' : '<span class=\"tag\">通用入口</span>'} ${esc(w.note)}</p></section>`).join('')}</div>
+<p class=\"muted\" style=\"font-size:12px\">在 track.json 顶层加 <code>webmasterTools: [{ \"name\", \"url\", \"note\" }]</code> 配置项目级资源，不影响冻结哈希。</p>`)
 
   // 基线
   const f = m.focus
