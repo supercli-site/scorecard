@@ -151,6 +151,15 @@ test('站长工具入口：项目级链接优先，缺哪家补通用入口；�
   expect(html).not.toMatch(/已验证|已收录[^；]/)
 })
 
+test('窄屏不横向溢出：表格单元格允许长链接 / code 在任意位置换行', async () => {
+  // 2026-11-10 实测 390px：查询明细里的长 URL 把 table 撑到 522px，document 横向溢出。
+  // 离线测试不起浏览器，锁住修复所依赖的那条样式；真实测量见 PR 记录。
+  const e = await seeded()
+  const html = handle({ method: 'GET', url: '/t/demo', host: LOCAL }, { env: e }).body
+  const rule = html.match(/th,td\{[^}]*\}/)?.[0] || ''
+  expect(rule).toContain('overflow-wrap:anywhere')
+})
+
 test('空数据目录：首页给出起步指引', () => {
   const e = env()
   expect(buildIndexModel({ env: e })).toEqual([])

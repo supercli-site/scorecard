@@ -316,7 +316,7 @@ h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:32px 0 12px}h3{font-si
 .legend{display:flex;gap:14px;font-size:12px;color:var(--text-muted);margin:6px 0 14px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-soft);vertical-align:top}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-soft);vertical-align:top;overflow-wrap:anywhere}
 th{color:var(--text-muted);font-weight:600;background:var(--bg-elev)}
 .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);color:var(--text-muted);white-space:nowrap}
 .tag.base{color:var(--accent);border-color:rgba(88,166,255,.45)}.tag.prev{color:var(--warn);border-color:rgba(227,179,65,.45)}
