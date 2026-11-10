@@ -162,7 +162,7 @@ async function printGeoBrands(api) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const target = args._[0]
-  // 本地 GEO 检索基线：纯本机执行，不走线上 API（采集要用本机检索工具，数据不出本机）
+  // 本地 GEO 检索基线：不走 Scorecard 线上 API；快照与报告存本机，采集时查询会发给配置的检索服务
   if (target === 'geo-track') {
     const { runGeoTrack } = await import('./geo-track.mjs')
     return runGeoTrack(args._.slice(1), args)

@@ -45,7 +45,8 @@
     "skills",
     "dist",
     "AGENTS.md",
-    "llms.txt"
+    "llms.txt",
+    "examples"
   ],
   "keywords": [
     "project-maturity",

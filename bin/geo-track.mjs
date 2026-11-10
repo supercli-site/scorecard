@@ -4,8 +4,9 @@
 //   scorecard geo-track list                                  列出本机 track
 //   scorecard geo-track status <id>                           查询冻结状态、快照、复测窗口
 //   scorecard geo-track capture <id> --kind baseline|retest|preview [--supplementary]
-//   scorecard geo-track import-derived <id> <sources.csv> [--note "..."]
+//   scorecard geo-track import-derived <id> <sources.csv> [--coverage <file>] [--note "..."]
 //   scorecard geo-track report <id> [--before <快照名>] [--after <快照名>] [--out <file.md>]
+//   scorecard geo-track freeze-kinds <id>                      旧格式 track 显式补冻结题型（只能执行一次）
 //   scorecard geo-track log <id> --type remediation|install --entry <入口> --what "..." [--url ...] [--state ...] [--source volunteer|isolated]
 //
 // 数据目录：~/.scorecard/geo（SCORECARD_GEO_DIR 可改）。项目数据不进仓库。
@@ -13,13 +14,14 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   dataDir, initTrack, listTracks, loadTrack, listSnapshots, capture, importDerived,
-  readSnapshot, summarize, compare, reportMarkdown, trackDir, queriesDigest,
+  readSnapshot, summarize, compare, reportMarkdown, trackDir, queriesDigest, freezeKinds,
 } from '../server/geo-track.js'
 
 export const GEO_TRACK_HELP = `
 scorecard geo-track — 本地 GEO 检索基线（固定查询 → 基线 → 整改 → 窗口内复测）
 
   init <track.json>              冻结查询并建 track；已存在则拒绝
+                                 格式模板：包内 examples/geo-track.track.json
   list                           列出本机所有 track
   status <id>                    冻结哈希、快照列表、复测窗口
   capture <id> --kind <k>        k = baseline | retest | preview
@@ -27,8 +29,12 @@ scorecard geo-track — 本地 GEO 检索基线（固定查询 → 基线 → �
     --supplementary              顺带采集 supplementary 查询（无历史基线，单列）
     --concurrency <n>            并发数，默认 3
   import-derived <id> <csv>      导入只剩派生数据的旧基线（CSV 列：query_id,url,source_kind）
+    --coverage <file>            覆盖清单（query_id 列的 CSV 或每行一个 id）；
+                                 不给则没有来源行的查询记为缺失，不算零命中
   report <id>                    基线与最新快照的有限比较（Markdown）
     --before <名> --after <名>   指定快照；--out <file> 写文件（不覆盖）
+  freeze-kinds <id>              旧格式 track 按当前 brand/category 补冻结题型；只能执行一次，
+                                 不改已有快照，也不能证明迁移之前的题型
   log <id> --type remediation|install --entry <入口> --what "..."
                                  登记整改或安装证据（install 需 --source volunteer|isolated）
 
@@ -59,6 +65,13 @@ function parseCsv(text) {
   return body.map((r) => Object.fromEntries(header.map((h, i) => [h.trim(), r[i] ?? ''])))
 }
 
+/** 覆盖清单：带 query_id 表头的 CSV，或每行一个查询 id（# 开头为注释）。 */
+function readCoverage(text) {
+  const firstLine = text.split(/\r?\n/, 1)[0]
+  if (/(^|,)\s*query_id\s*(,|$)/.test(firstLine)) return parseCsv(text).map((r) => r.query_id).filter(Boolean)
+  return text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+}
+
 function pick(snaps, name, fallback) {
   if (!name) return fallback
   const s = snaps.find((x) => x.name === name)
@@ -80,7 +93,7 @@ export async function runGeoTrack(argv, args) {
 
   if (sub === 'init') {
     const path = id
-    if (!path || !existsSync(path)) throw new Error('init 需要一个 track.json 路径')
+    if (!path || !existsSync(path)) throw new Error('init 需要一个 track.json 路径；格式见包内 examples/geo-track.track.json')
     const stored = initTrack(JSON.parse(readFileSync(path, 'utf8')))
     console.log(`✅ 已建 track ${stored.id}：${stored.queries.length} 条查询已冻结（sha256 ${stored.frozen.queriesSha256.slice(0, 12)}…）`)
     console.log(`   位置：${trackDir(stored.id)}`)
@@ -94,6 +107,8 @@ export async function runGeoTrack(argv, args) {
     const snaps = listSnapshots(id)
     const intact = queriesDigest(track.queries) === track.frozen.queriesSha256
     console.log(`${track.name || track.id}  ·  ${track.entries.length} 个入口 · ${track.queries.length} 条查询 · 冻结${intact ? '有效' : '已被改动 ❌'}`)
+    if (!track.frozen.kindsSha256) console.log('⚠ 旧格式冻结：哈希不含题型（brand/category），改题型不会被拦截；核对题型后可执行 freeze-kinds 补冻结')
+    else if (track.frozen.kindsFrozenBy === 'migration') console.log(`题型冻结于 ${track.frozen.kindsFrozenAt}（迁移，不证明此前题型）`)
     console.log(`复测窗口：${track.window ? `${track.window.start}..${track.window.end}（${track.window.timezone || 'UTC'}）` : '未登记'}`)
     console.log(`快照（${snaps.length}）：`)
     for (const s of snaps) console.log(`  · ${s.name}  [${s.kind}]`)
@@ -103,7 +118,16 @@ export async function runGeoTrack(argv, args) {
 
   if (sub === 'capture') {
     const kind = String(args.kind || '')
-    const r = await capture(id, { kind, includeSupplementary: Boolean(args.supplementary), concurrency: Number(args.concurrency) || 3 })
+    // 并发数要显式校验：`Number(x) || 3` 会把 0 吞成 3，也会把非数字变成 NaN。
+    // 传进来之前先确认是正整数，错误提示直接给用户看。
+    let concurrency = 3
+    if (args.concurrency != null) {
+      concurrency = Number(args.concurrency)
+      if (!Number.isInteger(concurrency) || concurrency < 1) {
+        throw new Error(`--concurrency 必须是 ≥ 1 的整数，收到：${args.concurrency}`)
+      }
+    }
+    const r = await capture(id, { kind, includeSupplementary: Boolean(args.supplementary), concurrency })
     console.log(`${kind}: ${r.summary.total} 条，失败 ${r.summary.failedQueryIds.length}；快照 ${r.dir}`)
     if (r.summary.failedQueryIds.length) {
       console.error(`失败（不计为零命中）：${r.summary.failedQueryIds.join(', ')}`)
@@ -115,7 +139,14 @@ export async function runGeoTrack(argv, args) {
   if (sub === 'import-derived') {
     if (!file || !existsSync(file)) throw new Error('import-derived 需要 CSV 路径（列：query_id,url,source_kind）')
     const sources = parseCsv(readFileSync(file, 'utf8')).map((r) => ({ queryId: r.query_id, url: r.url, kind: r.source_kind || 'unclassified', title: r.title || '' }))
-    const r = importDerived(id, { sources, note: String(args.note || '') })
+    // 覆盖清单：显式登记当时确实采到的查询（含「采到了但零来源」的）。
+    // 不给就按「CSV 里有来源行」推断，没来源行的查询记为缺失，不算零命中。
+    let coveredQueryIds = null
+    if (args.coverage) {
+      if (!existsSync(String(args.coverage))) throw new Error(`找不到覆盖清单：${args.coverage}`)
+      coveredQueryIds = readCoverage(readFileSync(String(args.coverage), 'utf8'))
+    }
+    const r = importDerived(id, { sources, coveredQueryIds, note: String(args.note || '') })
     console.log(`✅ 已导入派生基线：${sources.length} 行来源 → ${r.dir}`)
     return
   }
@@ -139,6 +170,13 @@ export async function runGeoTrack(argv, args) {
       writeFileSync(String(args.out), md, { flag: 'wx' })
       console.log(`✅ 报告已写入 ${args.out}`)
     } else console.log(md)
+    return
+  }
+
+  if (sub === 'freeze-kinds') {
+    const r = freezeKinds(id)
+    console.log(`✅ 已冻结 ${r.queries} 条查询的题型（sha256 ${r.kindsSha256.slice(0, 12)}…，${r.kindsFrozenAt}）`)
+    console.log('   之后改 brand/category 会拒绝采集。已有快照未改动；迁移证明不了此前的题型，报告会注明迁移时间。')
     return
   }
 

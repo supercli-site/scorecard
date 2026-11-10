@@ -43,6 +43,8 @@ The output isn't just a score — it's an **actionable list**. Every item comes 
 
 `geo` asks whether AI answers mention you. `geo-track` asks something else: **for a fixed set of questions, do the sources a search tool returns include your site, repository or package page**, and how does that look in a retest window after fixes. The two are reported separately.
 
+Start from the runnable template at [`examples/geo-track.track.json`](examples/geo-track.track.json) (also shipped in the npm package). Query ids may only contain letters, digits and `._-`; source `kind` values outside the documented vocabulary (see the Chinese README) count as unclassified, never as a hit.
+
 ```bash
 scorecard geo-track init track.json                  # freeze the queries
 scorecard geo-track capture <id> --kind baseline
@@ -51,7 +53,7 @@ scorecard geo-track capture <id> --kind retest       # only inside track.window;
 scorecard geo-track report <id> --out report.md      # failed queries are listed, never counted as misses
 ```
 
-Runs locally with the `magpie web_search` tool; data stays in `~/.scorecard/geo` (`SCORECARD_GEO_DIR`). Snapshots are never overwritten and are hash-checked before comparison. A URL in a search response does not prove ranking, indexing, installs or causation. Part of the free self-hosted edition.
+Runs on your machine and calls the `magpie web_search` tool by default. Snapshots and reports are stored locally in `~/.scorecard/geo` (`SCORECARD_GEO_DIR`) by default; during capture, queries are sent to the configured search service (and its backend) and handled under that service's policies. Snapshots are never overwritten and are hash-checked before comparison. Each snapshot freezes the `sources` classification rules it was captured with, so editing sources later never rewrites old results; pairs captured under different rules are reported as not comparable, and legacy snapshots without frozen rules are flagged as "not guaranteed comparable". In `import-derived`, queries without source rows count as missing, not as misses; use `--coverage <file>` to declare queries that were captured with zero sources. Query kinds (brand/category) are frozen too; tracks created by older versions can be migrated once with `scorecard geo-track freeze-kinds <id>`, which only protects against later edits, cannot prove earlier kinds and never touches existing snapshots. A URL in a search response does not prove ranking, indexing, installs or causation. Part of the free self-hosted edition.
 
 `scorecard geo-dashboard` opens a read-only local dashboard (tracks, baseline, remediation, install evidence, snapshots) at `http://127.0.0.1:54447/`; `scorecard geo-dashboard export <id> --out geo.html` writes a self-contained file instead. It binds to loopback only (non-loopback hosts and Host headers are refused), ships no JavaScript or external assets, and never shows raw search responses, unregistered third-party URLs or local paths.
 

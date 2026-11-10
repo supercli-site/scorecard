@@ -241,6 +241,18 @@ scorecard geo --brand 山鬼映画 --provider magpie
 
 上面的 `geo` 问的是「AI 答案里有没有提到你」；`geo-track` 问的是另一件事：**用一组固定问题去检索，返回的来源里有没有你的站点、仓库或包页**，并在整改后按窗口复测。两者口径不同，报告分开写。
 
+先写一份 track.json。可运行模板在 [`examples/geo-track.track.json`](examples/geo-track.track.json)（npm 包内同路径），复制后改成自己的：
+
+| 字段 | 要求 |
+|---|---|
+| `id` | 小写字母、数字、连字符，2–64 位；就是数据目录名 |
+| `entries[]` | 每个入口一个 `id`；`sources` 是「算自己的」URL 前缀（host + 可选路径），`kind` 取值见下 |
+| `queries[]` | 固定题：`id`（字母数字 `._-`，不能含 `/`）、`entry`、`kind`（`brand` 或 `category`）、`query` |
+| `window` | 可选：`start`/`end`（YYYY-MM-DD）+ IANA `timezone`；正式复测只能在窗口内 |
+| `supplementary[]` | 可选补充题：编号不能和固定题重名，不进冻结哈希，也没有历史基线 |
+
+`kind` 词表：`owned` `owned_site` `owned_site_old_domain` `owned_repository` `owned_package` `owned_package_page` `owned_gallery` `official_site` `official_repository` `official_gallery` `verified_third_party_directory` `verified_third_party_gallery` `verified_third_party_package_page` `verified_third_party_org_mirror`。词表外或留空一律当未归类，**不算命中**。
+
 ```bash
 scorecard geo-track init track.json                       # 冻结查询（之后改一个字都会拒绝采集）
 scorecard geo-track capture <id> --kind baseline          # 第 1 天：基线
@@ -249,8 +261,11 @@ scorecard geo-track capture <id> --kind retest            # 只允许在 track.w
 scorecard geo-track report <id> --out report.md           # 有限比较；失败查询单列，不算零命中
 ```
 
-- 纯本机执行，默认调用本机 `magpie web_search`；数据在 `~/.scorecard/geo`（`SCORECARD_GEO_DIR` 可改），不进仓库、不上传。
-- 快照只新建不覆盖，采完写 sha256 清单，比较前先校验。原始响应丢失的旧基线可用 `import-derived` 导入，报告会永久标注「原始响应缺失」。
+- 命令在本机运行，默认调用本机 `magpie web_search`。快照与报告默认保存在本机 `~/.scorecard/geo`（`SCORECARD_GEO_DIR` 可改），不进仓库；采集时查询会发送给配置的检索服务（及其后端），按该服务的政策处理。
+- 快照只新建不覆盖，采完写 sha256 清单，比较前先校验。采集中断留下的残目录（没有清单）不算快照，不会挡住重采。
+- 每份快照冻结采集当时的 `sources` 归类规则：事后改 sources 不会倒改旧快照的结论；前后快照规则不同的题单列为「归类规则已变，不可比较」。旧版本采集、没有规则快照的快照会按当前规则重算，报告明确标注「不保证可比」。
+- 题型（brand/category）也冻结：新建的 track 改题型会拒绝采集。旧版本建的 track 不含题型哈希，核对题型无误后可执行一次 `scorecard geo-track freeze-kinds <id>` 补冻结；它只保证此后不被改，证明不了此前的题型，不改已有快照，不能重复执行。
+- 原始响应丢失的旧基线可用 `import-derived` 导入，报告会永久标注「原始响应缺失」。CSV 里没有来源行的查询记为缺失，不算零命中；若某题确实采到但零来源，用 `--coverage <file>`（`query_id` 列或每行一个 id）显式登记覆盖。
 - URL 出现在检索响应里不代表搜索排名、收录、安装或因果；少量样本不构成统计显著。
 - 属于社区版能力，自托管免费。
 
