@@ -74,6 +74,7 @@ scorecard — 开源项目质检（GitHub / npm / 网页 / GitHub 首页 / GEO �
   scorecard <user> --type profile [选项]     # GitHub 个人首页质检（github.com/<user> 当简历测）
                                              # @user / github.com/<user> 形态可省 --type
   scorecard geo --brand <名> --q <问题> ...  # GEO：品牌在 AI 答案里的可见度
+  scorecard geo-track <子命令> ...           # 本地 GEO 检索基线：固定查询、基线、窗口复测（见 geo-track --help）
 
 选项:
   --type <类型>   入口类型：github | npm | page | profile（缺省按 <arg> 形式推断）
@@ -160,6 +161,11 @@ async function printGeoBrands(api) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const target = args._[0]
+  // 本地 GEO 检索基线：纯本机执行，不走线上 API（采集要用本机检索工具，数据不出本机）
+  if (target === 'geo-track') {
+    const { runGeoTrack } = await import('./geo-track.mjs')
+    return runGeoTrack(args._.slice(1), args)
+  }
   if (args.help || args.h) { console.log(HELP); return }
 
   // ---- 对比模式：--compare-a / --compare-b 必填，跳过单目标流程 ----

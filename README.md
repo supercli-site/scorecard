@@ -237,6 +237,23 @@ scorecard geo --brand 山鬼映画 --provider magpie
 注意 `--q` 是可以重复给的，且**必须是品类问题而不是品牌词** —— 问「X 怎么样」模型会顺着
 你的问题去提它，数字好看但一文不值。清单里的问题来自 Social Hub 的账号定位，不是从 bio 自动生成的。
 
+### 检索基线追踪（geo-track，本地）
+
+上面的 `geo` 问的是「AI 答案里有没有提到你」；`geo-track` 问的是另一件事：**用一组固定问题去检索，返回的来源里有没有你的站点、仓库或包页**，并在整改后按窗口复测。两者口径不同，报告分开写。
+
+```bash
+scorecard geo-track init track.json                       # 冻结查询（之后改一个字都会拒绝采集）
+scorecard geo-track capture <id> --kind baseline          # 第 1 天：基线
+scorecard geo-track log <id> --type remediation --entry A --what "补安装指南" --url ...
+scorecard geo-track capture <id> --kind retest            # 只允许在 track.window 内；窗口外用 --kind preview
+scorecard geo-track report <id> --out report.md           # 有限比较；失败查询单列，不算零命中
+```
+
+- 纯本机执行，默认调用本机 `magpie web_search`；数据在 `~/.scorecard/geo`（`SCORECARD_GEO_DIR` 可改），不进仓库、不上传。
+- 快照只新建不覆盖，采完写 sha256 清单，比较前先校验。原始响应丢失的旧基线可用 `import-derived` 导入，报告会永久标注「原始响应缺失」。
+- URL 出现在检索响应里不代表搜索排名、收录、安装或因果；少量样本不构成统计显著。
+- 属于社区版能力，自托管免费。
+
 ## 对比模式
 
 把两个目标放一起跑，输出维度差分 + 独有 gap 清单——主用例是**测试环境 vs 线上环境**：
