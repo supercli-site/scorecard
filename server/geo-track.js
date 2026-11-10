@@ -19,7 +19,7 @@
 
 import { createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -164,6 +164,35 @@ export function loadTrack(id, env = process.env) {
   const errors = validateTrack(track)
   if (errors.length) throw new Error(`track.json 不合法：\n  - ${errors.join('\n  - ')}`)
   return track
+}
+
+/**
+ * 旧格式 track 的显式迁移：按**当前** track.json 的题型补冻结 kindsSha256。
+ * - 只允许旧格式（没有 kindsSha256）；已冻结的再执行一次直接拒绝
+ * - 查询本身必须仍与冻结哈希一致，否则拒绝
+ * - 只改 track.json 的 frozen 字段（原子写入）；已有快照一个字节都不碰
+ * - 只能保证「迁移之后」题型不再被改；证明不了迁移之前的题型，报告会写明迁移时间
+ */
+export function freezeKinds(id, { env = process.env, now = new Date() } = {}) {
+  const track = loadTrack(id, env)
+  if (track.frozen?.kindsSha256) throw new Error(`track ${id} 的题型已冻结（${track.frozen.kindsFrozenAt || 'init 时'}），不能重复执行`)
+  if (queriesDigest(track.queries) !== track.frozen?.queriesSha256) throw new Error('查询与冻结时的哈希不一致，不能迁移；请先查清查询为什么被改动')
+  const at = now.toISOString()
+  const next = {
+    ...track,
+    frozen: {
+      ...track.frozen,
+      kindsSha256: kindsDigest(track.queries),
+      kindsFrozenAt: at,
+      kindsFrozenBy: 'migration',
+      kindsNote: '题型冻结由旧格式迁移得来：只保证迁移之后不被改动，不能证明迁移之前的题型。',
+    },
+  }
+  const file = join(trackDir(id, env), 'track.json')
+  const tmp = `${file}.freeze-kinds-${process.pid}.tmp`
+  writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n', { flag: 'wx' })
+  renameSync(tmp, file)
+  return { kindsSha256: next.frozen.kindsSha256, kindsFrozenAt: at, queries: track.queries.length }
 }
 
 export function listTracks(env = process.env) {
@@ -591,6 +620,9 @@ export function reportMarkdown(track, { before, after, diff, beforeSummary, afte
   const lines = [`# GEO 检索基线：${track.name || track.id}`, '', `> ${CAVEAT}`, '']
   if (before?.kind === 'derived-recovered') lines.push('> 基线为派生恢复数据（原始响应缺失），以下只是有限比较。', '')
   if (after?.kind === 'preview') lines.push('> 本次是 **preview**，不是正式复测，不能当作复测结果引用。', '')
+  if (track.frozen?.kindsFrozenBy === 'migration') {
+    lines.push(`> 题型冻结于 ${track.frozen.kindsFrozenAt}（由旧格式迁移）：只保证此后 brand/category 未被改动，**不能证明**此前采集时的题型。`, '')
+  }
   if (!track.frozen?.kindsSha256) {
     lines.push('> ⚠ 该 track 为旧格式冻结（哈希不含题型 brand/category）：改题型不会被拦截。' +
       '快照若记录了采集时题型，与当前不一致的题会单列为不可比较；没有记录的旧快照，品牌/品类分组**不保证**与采集时一致。', '')

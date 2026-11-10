@@ -6,6 +6,7 @@
 //   scorecard geo-track capture <id> --kind baseline|retest|preview [--supplementary]
 //   scorecard geo-track import-derived <id> <sources.csv> [--coverage <file>] [--note "..."]
 //   scorecard geo-track report <id> [--before <快照名>] [--after <快照名>] [--out <file.md>]
+//   scorecard geo-track freeze-kinds <id>                      旧格式 track 显式补冻结题型（只能执行一次）
 //   scorecard geo-track log <id> --type remediation|install --entry <入口> --what "..." [--url ...] [--state ...] [--source volunteer|isolated]
 //
 // 数据目录：~/.scorecard/geo（SCORECARD_GEO_DIR 可改）。项目数据不进仓库。
@@ -13,7 +14,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   dataDir, initTrack, listTracks, loadTrack, listSnapshots, capture, importDerived,
-  readSnapshot, summarize, compare, reportMarkdown, trackDir, queriesDigest,
+  readSnapshot, summarize, compare, reportMarkdown, trackDir, queriesDigest, freezeKinds,
 } from '../server/geo-track.js'
 
 export const GEO_TRACK_HELP = `
@@ -32,6 +33,8 @@ scorecard geo-track — 本地 GEO 检索基线（固定查询 → 基线 → �
                                  不给则没有来源行的查询记为缺失，不算零命中
   report <id>                    基线与最新快照的有限比较（Markdown）
     --before <名> --after <名>   指定快照；--out <file> 写文件（不覆盖）
+  freeze-kinds <id>              旧格式 track 按当前 brand/category 补冻结题型；只能执行一次，
+                                 不改已有快照，也不能证明迁移之前的题型
   log <id> --type remediation|install --entry <入口> --what "..."
                                  登记整改或安装证据（install 需 --source volunteer|isolated）
 
@@ -104,7 +107,8 @@ export async function runGeoTrack(argv, args) {
     const snaps = listSnapshots(id)
     const intact = queriesDigest(track.queries) === track.frozen.queriesSha256
     console.log(`${track.name || track.id}  ·  ${track.entries.length} 个入口 · ${track.queries.length} 条查询 · 冻结${intact ? '有效' : '已被改动 ❌'}`)
-    if (!track.frozen.kindsSha256) console.log('⚠ 旧格式冻结：哈希不含题型（brand/category），改题型不会被拦截；报告会标注')
+    if (!track.frozen.kindsSha256) console.log('⚠ 旧格式冻结：哈希不含题型（brand/category），改题型不会被拦截；核对题型后可执行 freeze-kinds 补冻结')
+    else if (track.frozen.kindsFrozenBy === 'migration') console.log(`题型冻结于 ${track.frozen.kindsFrozenAt}（迁移，不证明此前题型）`)
     console.log(`复测窗口：${track.window ? `${track.window.start}..${track.window.end}（${track.window.timezone || 'UTC'}）` : '未登记'}`)
     console.log(`快照（${snaps.length}）：`)
     for (const s of snaps) console.log(`  · ${s.name}  [${s.kind}]`)
@@ -166,6 +170,13 @@ export async function runGeoTrack(argv, args) {
       writeFileSync(String(args.out), md, { flag: 'wx' })
       console.log(`✅ 报告已写入 ${args.out}`)
     } else console.log(md)
+    return
+  }
+
+  if (sub === 'freeze-kinds') {
+    const r = freezeKinds(id)
+    console.log(`✅ 已冻结 ${r.queries} 条查询的题型（sha256 ${r.kindsSha256.slice(0, 12)}…，${r.kindsFrozenAt}）`)
+    console.log('   之后改 brand/category 会拒绝采集。已有快照未改动；迁移证明不了此前的题型，报告会注明迁移时间。')
     return
   }
 

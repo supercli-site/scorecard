@@ -19,7 +19,7 @@ import { join } from 'node:path'
 import {
   initTrack, loadTrack, capture, captureGate, listSnapshots, importDerived, readSnapshot,
   summarize, compare, reportMarkdown, classifyUrl, extractUrls, trackDir, validateTrack,
-  normalizeSourceKind, isHitKind, writeManifest, MANIFEST, CAVEAT,
+  normalizeSourceKind, isHitKind, writeManifest, MANIFEST, freezeKinds, CAVEAT,
 } from '../server/geo-track.js'
 
 const TRACK = {
@@ -450,4 +450,54 @@ test('旧格式 track（无 kindsSha256）照常可用，不被改写；题型�
   const md = reportMarkdown(track, { before: snap, after: snap, diff, beforeSummary: summarize(track, rows), afterSummary: summarize(track, rows) })
   expect(md).toContain('旧格式冻结')
   expect(md).toContain('题型已变')
+})
+
+// ---------- freeze-kinds 迁移 ----------
+
+const snapshotHashes = (e) => listSnapshots('demo', e).map((s) => readdirSyncDeep(s.dir))
+import { readdirSync as _rd, statSync as _st } from 'node:fs'
+import { createHash as _ch } from 'node:crypto'
+function readdirSyncDeep(dir) {
+  const out = {}
+  for (const n of _rd(dir)) { const p = join(dir, n); if (_st(p).isDirectory()) Object.assign(out, Object.fromEntries(Object.entries(readdirSyncDeep(p)).map(([k, v]) => [`${n}/${k}`, v]))); else out[n] = _ch('sha256').update(readFileSync(p)).digest('hex') }
+  return out
+}
+
+test('freeze-kinds：只对旧格式生效，记录迁移时间，不改快照，重复执行拒绝', async () => {
+  const e = env()
+  initTrack(TRACK, e)
+  setKind(e, 'A-B1', 'brand', true) // 模拟旧格式
+  await capture('demo', { kind: 'baseline', env: e, adapter: adapter({ 'alpha plugin': reply('https://alpha.example.com') }) })
+  const before = snapshotHashes(e)
+  const r = freezeKinds('demo', { env: e, now: new Date('2026-11-10T09:00:00Z') })
+  expect(r.kindsFrozenAt).toBe('2026-11-10T09:00:00.000Z')
+  const t = loadTrack('demo', e)
+  expect(t.frozen.kindsFrozenBy).toBe('migration')
+  expect(t.frozen.queriesSha256).toBe(loadTrackFrozen().queriesSha256) // 原哈希不变
+  expect(snapshotHashes(e)).toEqual(before) // 快照一个字节不变
+  expect(() => freezeKinds('demo', { env: e })).toThrow(/不能重复执行/)
+  // 迁移后改题型 → 拒绝采集
+  setKind(e, 'A-B1', 'category')
+  await expect(capture('demo', { kind: 'preview', env: e, adapter: adapter({}) })).rejects.toThrow(/题型/)
+  setKind(e, 'A-B1', 'brand')
+  const [snap] = listSnapshots('demo', e)
+  const track = loadTrack('demo', e)
+  const rows = readSnapshot(track, snap)
+  const md = reportMarkdown(track, { before: snap, diff: compare(track, rows, rows), beforeSummary: summarize(track, rows) })
+  expect(md).toContain('不能证明')
+  expect(md).not.toContain('旧格式冻结（哈希不含题型')
+})
+
+test('freeze-kinds：新格式 track 拒绝；查询已被改动时拒绝', () => {
+  const e = env()
+  initTrack(TRACK, e)
+  expect(() => freezeKinds('demo', { env: e })).toThrow(/已冻结/)
+  const e2 = env()
+  initTrack(TRACK, e2)
+  const file = join(trackDir('demo', e2), 'track.json')
+  const t = JSON.parse(readFileSync(file, 'utf8'))
+  delete t.frozen.kindsSha256
+  t.queries[0].query = 'changed'
+  writeFileSync(file, JSON.stringify(t))
+  expect(() => freezeKinds('demo', { env: e2 })).toThrow(/哈希不一致/)
 })
