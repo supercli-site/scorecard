@@ -31,7 +31,7 @@ const SNAPSHOT_KINDS = new Set(['baseline', 'retest', 'preview', 'derived-recove
 // 归类词表。历史派生基线用过这些值，不能因为收紧校验把旧证据判成非法。
 // 未列出的值一律当「未归类」，不算命中 —— 缺失或非法不能被当成命中。
 const KNOWN_SOURCE_KINDS = new Set([
-  'owned', 'owned_site', 'owned_repository', 'owned_package', 'owned_gallery',
+  'owned', 'owned_site', 'owned_site_old_domain', 'owned_repository', 'owned_package', 'owned_package_page', 'owned_gallery',
   'official_gallery', 'official_site', 'official_repository',
   'verified_third_party_directory', 'verified_third_party_gallery',
   'verified_third_party_package_page', 'verified_third_party_org_mirror',

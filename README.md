@@ -251,7 +251,7 @@ scorecard geo --brand 山鬼映画 --provider magpie
 | `window` | 可选：`start`/`end`（YYYY-MM-DD）+ IANA `timezone`；正式复测只能在窗口内 |
 | `supplementary[]` | 可选补充题：编号不能和固定题重名，不进冻结哈希，也没有历史基线 |
 
-`kind` 词表：`owned` `owned_site` `owned_repository` `owned_package` `owned_gallery` `official_site` `official_repository` `official_gallery` `verified_third_party_directory` `verified_third_party_gallery` `verified_third_party_package_page` `verified_third_party_org_mirror`。词表外或留空一律当未归类，**不算命中**。
+`kind` 词表：`owned` `owned_site` `owned_site_old_domain` `owned_repository` `owned_package` `owned_package_page` `owned_gallery` `official_site` `official_repository` `official_gallery` `verified_third_party_directory` `verified_third_party_gallery` `verified_third_party_package_page` `verified_third_party_org_mirror`。词表外或留空一律当未归类，**不算命中**。
 
 ```bash
 scorecard geo-track init track.json                       # 冻结查询（之后改一个字都会拒绝采集）

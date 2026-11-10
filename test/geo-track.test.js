@@ -501,3 +501,21 @@ test('freeze-kinds：新格式 track 拒绝；查询已被改动时拒绝', () =
   writeFileSync(file, JSON.stringify(t))
   expect(() => freezeKinds('demo', { env: e2 })).toThrow(/哈希不一致/)
 })
+
+// ---------- 真实 track 在用的归类值不能回归 ----------
+
+test('真实 track（dsh-four-entries）在用的 9 种 kind 全部在词表内，且自有来源照常命中', () => {
+  const real = ['owned_site', 'owned_site_old_domain', 'owned_repository', 'owned_package_page',
+    'official_gallery', 'verified_third_party_directory', 'verified_third_party_gallery',
+    'verified_third_party_org_mirror', 'verified_third_party_package_page']
+  for (const k of real) {
+    expect(normalizeSourceKind(k)).toBe(k)
+    expect(isHitKind(k)).toBe(true)
+  }
+  const sources = [
+    { prefix: 'www.npmjs.com/package/dsh-bloom-theme', kind: 'owned_package_page' },
+    { prefix: 'scorecard.webkubor.online', kind: 'owned_site_old_domain' },
+  ]
+  expect(classifyUrl('https://www.npmjs.com/package/dsh-bloom-theme', sources)).toBe('owned_package_page')
+  expect(classifyUrl('https://scorecard.webkubor.online/report', sources)).toBe('owned_site_old_domain')
+})
