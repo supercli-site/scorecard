@@ -1038,37 +1038,6 @@ app.get('/api/scorecard/compare.md', async (c) => {
   return c.body(md)
 })
 
-// 分享埋点 —— 前端 logShare() 打这个端点。
-// 原仓只实现了 GET /api/ops，没有 POST，所以这个埋点一直静默 404，
-// 传播数据从来没落过库（fetch 的 .catch(() => {}) 把它吞了）。拆仓时补上。
-app.post('/api/ops', async (c) => {
-  const body = await c.req.json().catch(() => ({}))
-  const action = (body.action || '').toString()
-  // 白名单：只收 scorecard 自己的埋点，不做通用日志入口
-  if (!['scorecard.share'].includes(action)) {
-    return c.json({ error: 'unsupported action' }, 400)
-  }
-  logOp({
-    actor: c.req.header('x-visitor-id') || 'anonymous',
-    action,
-    target: body.target || '',
-    detail: body.detail || ''
-  })
-  return c.json({ ok: true })
-})
-
-// 分享数据 —— 各渠道分别被点了多少次
-app.get('/api/ops', (c) => {
-  const rows = db.query(`
-    SELECT action, detail, COUNT(*) AS hits
-    FROM ops_log
-    WHERE action = 'scorecard.share'
-    GROUP BY action, detail
-    ORDER BY hits DESC
-  `).all()
-  return c.json({ items: rows })
-})
-
 // 健康检查 —— 部署烟雾测试用，不碰 GitHub
 app.get('/api/health', (c) => c.json({ ok: true, hasToken: !!GITHUB_TOKEN, dist: HAS_DIST }))
 
