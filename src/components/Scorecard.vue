@@ -372,14 +372,12 @@ async function copyCompareMarkdown() {
   shareMsg.value = '📝 正在生成对比 Markdown…'
   try {
     const res = await fetch(`/api/scorecard/compare.md?type=${type}&a=${encodeURIComponent(a.project)}&b=${encodeURIComponent(b.project)}`, {
-      headers: { 'X-Visitor-Id': getVisitorId() },
       cache: 'no-store',
     })
     if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`)
     const md = await res.text()
     await navigator.clipboard.writeText(md)
     shareMsg.value = '✅ 对比 Markdown 已复制'
-    logShare('compare-copy-markdown')
   } catch (err) {
     shareMsg.value = `❌ ${err.message} —— 已在新标签打开`
     window.open(`/api/scorecard/compare.md?type=${compareReport.value.type}&a=${encodeURIComponent(compareReport.value.a.project)}&b=${encodeURIComponent(compareReport.value.b.project)}`, '_blank')
@@ -413,7 +411,6 @@ async function copyCompareLink() {
   try {
     await navigator.clipboard.writeText(url)
     shareMsg.value = '✅ 对比链接已复制 —— 粘贴到 IM 即可分享'
-    logShare('compare-copy-link')
   } catch {
     shareMsg.value = '❌ 复制失败 —— 已选中可手动复制'
   }
@@ -585,35 +582,11 @@ const shareBusy = ref(false)
 const shareMsg = ref('')
 const cardRef = ref(null)
 
-function logShare(kind) {
-  // 上报一个 ops 记录，方便看传播数据
-  fetch('/api/ops', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': getVisitorId() },
-    body: JSON.stringify({
-      action: 'scorecard.share',
-      target: parsedRepo.value,
-      detail: kind,
-      ts: new Date().toISOString()
-    })
-  }).catch(() => {})
-}
-
-function getVisitorId() {
-  let id = localStorage.getItem('scorecard:visitor-id')
-  if (!id) {
-    id = 'v-' + Math.random().toString(36).slice(2, 10)
-    localStorage.setItem('scorecard:visitor-id', id)
-  }
-  return id
-}
-
 async function copyShareLink() {
   const url = window.location.origin + '/#/report/' + parsedRepo.value
   try {
     await navigator.clipboard.writeText(url)
     shareMsg.value = '✅ 链接已复制'
-    logShare('copy-link')
   } catch {
     shareMsg.value = '❌ 复制失败，请手动复制地址栏 URL'
   }
@@ -655,14 +628,12 @@ async function copyMarkdown() {
   shareMsg.value = '📝 正在生成 Markdown 报告…'
   try {
     const res = await fetch(`/api/scorecard/report.md?${reportQuery.value}`, {
-      headers: { 'X-Visitor-Id': getVisitorId() },
       cache: 'no-store'
     })
     if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`)
     const md = await res.text()
     await navigator.clipboard.writeText(md)
     shareMsg.value = '✅ Markdown 已复制 —— 直接粘给 AI，让它照着改'
-    logShare('copy-markdown')
   } catch (err) {
     // 剪贴板在非 https / 无权限时会失败，这时把报告开在新标签页让人手动复制
     shareMsg.value = `❌ ${err.message} —— 已在新标签打开，可手动复制`
@@ -678,7 +649,6 @@ async function downloadMarkdown() {
   if (!parsedRepo.value) return
   try {
     const res = await fetch(`/api/scorecard/report.md?${reportQuery.value}`, {
-      headers: { 'X-Visitor-Id': getVisitorId() }
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const md = await res.text()
@@ -692,7 +662,6 @@ async function downloadMarkdown() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     shareMsg.value = '✅ 报告已下载'
-    logShare('download-markdown')
   } catch (err) {
     shareMsg.value = `❌ ${err.message}`
   }

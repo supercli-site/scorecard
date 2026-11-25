@@ -25,6 +25,8 @@ import UpdatePrompt from 'vite-plugin-refresh-guard/vue/UpdatePrompt.vue'
 
 const appVersion = __APP_VERSION__
 
+try { localStorage.removeItem('scorecard:visitor-id') } catch {}
+
 // 部署了新版本怎么切换：轮询 version.json 检测新版本，toast 提示后自动刷新。
 const { hasUpdate, mode, applyUpdate } = useVersionCheck(__REFRESH_GUARD_VERSION__, {
   mode: 'toast-auto',
