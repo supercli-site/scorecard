@@ -96,7 +96,6 @@ const parsedRepo = ref('') // owner/name
 const report = ref(null)
 const cached = ref(false)
 const errorMsg = ref('')
-const stats = ref({ total: 0, avg: 0 })
 const trending = ref([])
 
 const leaderboard = ref([])
@@ -114,12 +113,7 @@ function resetCompare() {
   compareCached.value = { a: false, b: false }
 }
 
-async function loadStats() {
-  try {
-    const res = await fetch('/api/scorecard/stats', { cache: 'no-store' })
-    const j = await res.json().catch(() => ({}))
-    stats.value = { total: j.total || 0, avg: j.avg || 0 }
-  } catch {}
+async function loadReferences() {
   try {
     const r = await fetch('/api/scorecard/trending', { cache: 'no-store' })
     const j = await r.json().catch(() => ({}))
@@ -707,7 +701,7 @@ async function downloadMarkdown() {
 
 // ---------- 初始化 ----------
 onMounted(() => {
-  loadStats()
+  loadReferences()
   // 单目标分享：#/report/<repo> 或 #/report/@<user>（个人首页）
   if (props.initialRepo && (/\/[\w.-]+/.test(props.initialRepo) || /^@[\w.-]+$/.test(props.initialRepo))) {
     input.value = props.initialRepo
@@ -856,7 +850,7 @@ onMounted(() => {
 
       <div class="sc-trust">
         <span class="sc-trust-dot" />
-        <span>共查过 <b>{{ stats.total || '—' }}</b> 次 · 平均分 <b>{{ stats.avg || '—' }}</b></span>
+        <a href="https://webkubor.online/usage" target="_blank" rel="noopener">查看应用使用量</a>
         <span class="muted">·  标准与 <a href="https://github.com/supercli-site/scorecard/tree/main/skills/project-maturity-audit" target="_blank" rel="noopener">project-maturity-audit</a> 同源</span>
       </div>
 

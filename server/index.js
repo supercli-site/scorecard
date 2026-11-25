@@ -23,6 +23,7 @@ import { auditGeo, reportMarkdown as reportMarkdownGeo, geoProviderStatus, hydra
 import { compareReports, compareMarkdown } from './compare.js'
 import { displayBand, SCORE_HINT } from './score-labels.js'
 import { sitemapHandler } from './sitemap.js'
+import { recordUsage } from './usage.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -316,7 +317,9 @@ async function getOrAudit(type, key, opts) {
       .query(`SELECT * FROM audits WHERE projectId = ? AND targetType = ? ORDER BY ts DESC LIMIT 1`)
       .get(key, type)
     if (cached && Date.now() - new Date(cached.ts).getTime() < 30 * 60 * 1000) {
-      return { report: hydrate(cached, key, type), cached: true }
+      const report = hydrate(cached, key, type)
+      if (report && !report.error && report.score != null) void recordUsage(type, true)
+      return { report, cached: true }
     }
   }
   /*
@@ -332,6 +335,7 @@ async function getOrAudit(type, key, opts) {
     report = { error: `审计引擎异常：${e?.message || e}`, errorStatus: 503, score: null }
   }
   if (report && !report.error && report.score != null) {
+    void recordUsage(type, false)
     try {
       db.run(
         `INSERT INTO audits (projectId, targetType, ts, score, band, type, stars, dims, todos, meta) VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -458,16 +462,6 @@ app.get('/api/scorecard', async (c) => {
   })
 
   return c.json({ cached, type, report })
-})
-
-// 累计统计 —— 落地页信任状：已查过几次、平均分
-app.get('/api/scorecard/stats', (c) => {
-  const total = db.query(`SELECT COUNT(*) AS n FROM audits`).get()?.n || 0
-  const avg = db.query(`SELECT AVG(score) AS a FROM audits WHERE score IS NOT NULL`).get()?.a
-  return c.json({
-    total,
-    avg: avg != null ? Number(Number(avg).toFixed(1)) : 0
-  })
 })
 
 // 排行榜 —— 每个项目取最新一次质检，按分数排。

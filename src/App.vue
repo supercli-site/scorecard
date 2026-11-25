@@ -15,7 +15,7 @@
  * 另一种（更短，分享友好）：?share=X&compare=Y&type=Z 直接挂在根 URL 上，
  * 后端 SPA fallback 都认 —— 同一个效果，IM 里贴得更短。
  */
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import Scorecard from './components/Scorecard.vue'
 import GeoCard from './components/GeoCard.vue'
 import Icon from './components/Icon.vue'
@@ -85,13 +85,6 @@ window.addEventListener('hashchange', () => {
 })
 window.addEventListener('popstate', () => { route.value = parseRoute() })
 
-const stats = ref(null)
-onMounted(async () => {
-  try {
-    const r = await fetch('/api/scorecard/stats')
-    if (r.ok) stats.value = await r.json()
-  } catch {}
-})
 </script>
 
 <template>

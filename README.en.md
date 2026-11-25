@@ -167,6 +167,7 @@ Front it with a Cloudflare Tunnel pointing at `127.0.0.1:54445` — no public po
 | Variable | Default | Notes |
 |---|---|---|
 | `SCORECARD_PORT` / `PORT` | 54445 | Backend port |
+| `SCORECARD_ANALYTICS` | off | Set to `1` only in production to anonymously count successful audits and cached reports by engine through Core API. No targets, URLs, brands, or user identifiers are sent. Usage is shown at https://webkubor.online/usage; historical reports are not backfilled and counts do not represent people. |
 | `SCORECARD_HOST` / `HOST` | 0.0.0.0 | Bind address (production: prefer 127.0.0.1) |
 | `SCORECARD_GITHUB_TOKEN` | – | Read-only token; raises API limit, unlocks PR/Issues dimensions |
 | `SCORECARD_DATA_DIR` | ./data | sqlite data dir |
@@ -186,7 +187,6 @@ All endpoints are no-login (except GitHub dims, which can take a token for rate 
 | `GET /api/scorecard/report.md?type=...&...` | Same report as Markdown, written for an AI assistant |
 | `GET /api/scorecard/compare?type=...&a=X&b=Y` | Two-target compare: both reports + per-dim diff |
 | `GET /api/scorecard/compare.md?type=...&a=X&b=Y` | Compare report as Markdown |
-| `GET /api/scorecard/stats` | Cumulative query count and average score |
 | `GET /api/scorecard/trending` | Top 10 hot repos in the last 24h |
 | `GET /api/scorecard/leaderboard?limit=20` | Leaderboard: latest audit per project, sorted by score |
 | `GET /og/scorecard/:owner/:repo` | 1200×630 OG share image (SVG) |

@@ -406,6 +406,7 @@ Restart=always
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `SCORECARD_PORT` / `PORT` | 54445 | 后端监听端口 |
+| `SCORECARD_ANALYTICS` | 关闭 | 仅线上设为 `1`，将成功新审计与缓存报告按引擎枚举匿名发送到 Core API；不发送目标、URL、品牌或用户信息。使用量集中展示于 https://webkubor.online/usage ，不回填历史报告，不代表人数。 |
 | `SCORECARD_HOST` / `HOST` | 0.0.0.0 | 监听地址（生产建议 127.0.0.1） |
 | `SCORECARD_GITHUB_TOKEN` | – | 只读 token，提升 API 限额并解锁 PR/Issues 维度 |
 | `SCORECARD_GEO_ANTHROPIC_KEY` | – | GEO 的 anthropic 路。**线上故意不配**（只读历史，零花费） |
@@ -434,7 +435,6 @@ Restart=always
 | `GET /api/scorecard/compare?type=...&a=X&b=Y` | 两路对比，返回两份报告 + 维度 diff |
 | `GET /api/scorecard/compare.md?type=...&a=X&b=Y` | 对比报告的 Markdown 版 |
 | `GET /api/scorecard/history?target=owner/name` | 同一项目的历次评估与维度变化（改完再跑一次，就能看出动没动） |
-| `GET /api/scorecard/stats` | 累计查询次数与平均分 |
 | `GET /api/scorecard/trending` | 近 24h 热门仓库 Top 10 |
 | `GET /api/scorecard/leaderboard?limit=20` | 参照榜：每个项目取最新一次质检，按分数排 |
 | `GET /api/scorecard?type=geo&brand=X&q=Q1,Q2&competitors=A,B&provider=...` | GEO 4 维可见度（**不走 30 分钟缓存**，见下） |
